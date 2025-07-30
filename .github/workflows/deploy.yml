@@ -4,9 +4,9 @@ on:
   push:
     branches: [main]
     paths:
-      - 'logobox/website/**'
-      - 'logobox/assets/**'
-      - 'logobox/package/**'
+      - 'website/**'
+      - 'assets/**'
+      - 'package/**'
       - '.env.example'
       - '.github/workflows/deploy.yml'
   workflow_dispatch:
@@ -43,36 +43,27 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-          cache-dependency-path: logobox/package-lock.json
       
       - name: Install dependencies
-        run: |
-          cd logobox
-          npm ci
+        run: npm ci
       
       - name: Run environment check
-        run: |
-          cd logobox
-          npm run env-check
+        run: npm run env-check
       
       - name: Run unit tests
-        run: |
-          cd logobox
-          npm run test:unit
+        run: npm run test:unit
       
       - name: Run integration tests
-        run: |
-          cd logobox
-          npm run test:integration
+        run: npm run test:integration
       
       - name: Run website tests
         run: |
-          cd logobox/website
+          cd website
           npm run test:unit
       
       - name: Run package tests
         run: |
-          cd logobox/package
+          cd package
           npm run test:unit
 
   build:
@@ -94,37 +85,24 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-          cache-dependency-path: logobox/package-lock.json
       
       - name: Install dependencies
-        run: |
-          cd logobox
-          npm ci
+        run: npm ci
       
       - name: Validate metadata
-        run: |
-          cd logobox
-          npm run validate-metadata
+        run: npm run validate-metadata
       
       - name: Generate logo variants
-        run: |
-          cd logobox
-          npm run generate-variants
+        run: npm run generate-variants
       
       - name: Optimize assets
-        run: |
-          cd logobox
-          npm run optimize-assets
+        run: npm run optimize-assets
       
       - name: Build catalog
-        run: |
-          cd logobox
-          npm run build-catalog
+        run: npm run build-catalog
       
       - name: Build website
-        run: |
-          cd logobox
-          npm run build --workspace=website
+        run: npm run build --workspace=website
         env:
           NODE_ENV: production
           VITE_BUILD_TIME: ${{ github.run_id }}
@@ -134,7 +112,7 @@ jobs:
       - name: Generate build info
         id: build-info
         run: |
-          BUILD_HASH=$(find logobox/website/dist -type f -exec sha256sum {} \; | sha256sum | cut -d' ' -f1)
+          BUILD_HASH=$(find website/dist -type f -exec sha256sum {} \; | sha256sum | cut -d' ' -f1)
           BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
           echo "hash=${BUILD_HASH}" >> $GITHUB_OUTPUT
           echo "time=${BUILD_TIME}" >> $GITHUB_OUTPUT
@@ -145,7 +123,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: website-build-${{ github.run_id }}
-          path: logobox/website/dist/
+          path: website/dist/
           retention-days: 7
 
   deploy-production:
@@ -165,7 +143,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: website-build-${{ github.run_id }}
-          path: logobox/website/dist/
+          path: website/dist/
       
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/pages-action@v1
@@ -173,7 +151,7 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           projectName: logobox
-          directory: logobox/website/dist
+          directory: website/dist
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
           wranglerVersion: '3'
       
@@ -242,7 +220,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: website-build-${{ github.run_id }}
-          path: logobox/website/dist/
+          path: website/dist/
       
       - name: Deploy to Cloudflare Pages (Preview)
         uses: cloudflare/pages-action@v1
@@ -250,7 +228,7 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           projectName: logobox-preview
-          directory: logobox/website/dist
+          directory: website/dist
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
           wranglerVersion: '3'
       

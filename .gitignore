@@ -103,3 +103,7 @@ test-artifacts/
 # Performance monitoring
 .lighthouse/
 performance-reports/
+
+# IDE
+.kiro/
+.vscode/
