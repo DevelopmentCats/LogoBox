@@ -26,15 +26,28 @@ This directory contains all the configuration files and documentation needed to 
    ./deployment/scripts/cloudflare-env-setup.sh test-connectivity
    ```
 
+## Deployment Environments
+
+LogoBox supports multiple deployment environments:
+
+- **Production**: `main` branch → `logobox.com`
+- **Development**: `development` branch → `dev.logobox.dev` 
+- **Preview**: Manual trigger → `preview.logobox.com`
+
+For development deployment setup, see [`README-dev.md`](./README-dev.md).
+
 ## Files Overview
 
 ### Configuration Files
 
 | File | Purpose | Description |
 |------|---------|-------------|
-| [`wrangler.toml`](./wrangler.toml) | Cloudflare configuration | Advanced settings with compression, caching rules, security headers, and Node.js compatibility |
-| [`_redirects`](./_redirects) | SPA routing & optimization | Handles client-side routing, asset optimization, and performance headers |
-| [`pages-build.toml`](./pages-build.toml) | Build configuration | Comprehensive build settings for asset processing, optimization, and deployment |
+| [`wrangler.toml`](./wrangler.toml) | Production Cloudflare config | Advanced settings with compression, caching rules, security headers, and Node.js compatibility |
+| [`wrangler.dev.toml`](./wrangler.dev.toml) | Development Cloudflare config | Development-specific settings with relaxed caching and debugging features |
+| [`_redirects`](./_redirects) | Production SPA routing | Handles client-side routing, asset optimization, and performance headers |
+| [`_redirects.dev`](./_redirects.dev) | Development SPA routing | Development-specific routing with shorter cache durations |
+| [`pages-build.toml`](./pages-build.toml) | Production build config | Comprehensive build settings for asset processing, optimization, and deployment |
+| [`pages-build.dev.toml`](./pages-build.dev.toml) | Development build config | Development build settings optimized for faster iteration |
 | [`environment-variables.json`](./environment-variables.json) | Variable reference | Complete reference of all environment variables with validation rules |
 
 ### Documentation
@@ -43,6 +56,7 @@ This directory contains all the configuration files and documentation needed to 
 |------|---------|-------------|
 | [`pages-config.md`](./pages-config.md) | Complete setup guide | Comprehensive instructions for Cloudflare Pages configuration |
 | [`environment-setup.md`](./environment-setup.md) | Environment variables guide | Detailed guide for configuring environment variables |
+| [`README-dev.md`](./README-dev.md) | Development deployment | Complete guide for development environment setup and deployment |
 | [`README.md`](./README.md) | This file | Overview and quick start guide |
 
 ### Scripts
@@ -50,6 +64,7 @@ This directory contains all the configuration files and documentation needed to 
 | File | Purpose | Description |
 |------|---------|-------------|
 | [`../scripts/cloudflare-env-setup.sh`](../scripts/cloudflare-env-setup.sh) | Environment management | Script to generate, validate, and test environment variables |
+| [`../scripts/deploy-dev.sh`](../scripts/deploy-dev.sh) | Development deployment | Manual deployment script for development environment |
 
 ## Environment Variables Summary
 

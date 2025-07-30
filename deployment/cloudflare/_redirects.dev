@@ -1,0 +1,97 @@
+# Development-specific redirects for dev.logobox.dev
+# SPA routing - redirect all non-asset requests to index.html
+/*    /index.html   200
+
+# API redirects for future API endpoints (development)
+# /api/*  https://dev-api.logobox.dev/:splat  200
+
+# Static asset optimization with shorter caching for development (easier debugging)
+/assets/*  /assets/:splat  200
+  Cache-Control: public, max-age=3600
+  X-Content-Type-Options: nosniff
+  X-Environment: development
+
+# Logo assets with shorter caching for development
+/logos/*  /logos/:splat  200
+  Cache-Control: public, max-age=1800
+  X-Content-Type-Options: nosniff
+  X-Environment: development
+
+# Catalog caching for development (shorter for faster updates)
+/catalog.json  /catalog.json  200
+  Cache-Control: public, max-age=300
+  Content-Type: application/json
+  X-Environment: development
+
+# Favicon and PWA manifest files
+/favicon.ico  /favicon.ico  200
+  Cache-Control: public, max-age=3600
+  Content-Type: image/x-icon
+
+/manifest.json  /manifest.json  200
+  Cache-Control: public, max-age=3600
+  Content-Type: application/manifest+json
+
+# Font files with long-term caching (same as production)
+/assets/fonts/*  /assets/fonts/:splat  200
+  Cache-Control: public, max-age=31536000, immutable
+  Access-Control-Allow-Origin: *
+
+# Image optimization (shorter cache for development)
+/assets/images/*  /assets/images/:splat  200
+  Cache-Control: public, max-age=3600
+  X-Content-Type-Options: nosniff
+  X-Environment: development
+
+# CSS and JS files with shorter caching for development
+/assets/styles/*  /assets/styles/:splat  200
+  Cache-Control: public, max-age=3600
+  Content-Type: text/css
+  X-Environment: development
+
+/assets/*.js  /assets/:splat  200
+  Cache-Control: public, max-age=3600
+  Content-Type: application/javascript
+  X-Environment: development
+
+/assets/*.mjs  /assets/:splat  200
+  Cache-Control: public, max-age=3600
+  Content-Type: application/javascript
+  X-Environment: development
+
+# Security headers for HTML files (relaxed for development)
+/*.html
+  X-Frame-Options: SAMEORIGIN
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' https: ws: wss:;
+  X-DNS-Prefetch-Control: on
+  X-XSS-Protection: 1; mode=block
+  X-Environment: development
+
+# Root HTML file
+/
+  X-Frame-Options: SAMEORIGIN
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' https: ws: wss:;
+  X-Environment: development
+
+# CORS headers for API endpoints and JSON files (more permissive for development)
+/api/*
+  Access-Control-Allow-Origin: *
+  Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
+  Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With
+  Access-Control-Allow-Credentials: true
+  Access-Control-Max-Age: 86400
+
+# Handle 404s for SPA routing
+/404.html  /index.html  200
+
+# Preload critical resources (with development cache headers)
+/index.html
+  Link: </assets/styles/index.css>; rel=preload; as=style
+  Link: </assets/index.js>; rel=preload; as=script
+  X-Environment: development

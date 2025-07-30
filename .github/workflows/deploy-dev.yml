@@ -1,24 +1,16 @@
-name: Prod Deployment
+name: Dev Deployment
 
 on:
   push:
-    branches: [main]
+    branches: [development]
     paths:
       - 'logobox/website/**'
       - 'logobox/assets/**'
       - 'logobox/package/**'
       - '.env.example'
-      - '.github/workflows/deploy.yml'
+      - '.github/workflows/deploy-dev.yml'
   workflow_dispatch:
     inputs:
-      environment:
-        description: 'Deployment environment'
-        required: true
-        default: 'production'
-        type: choice
-        options:
-          - production
-          - preview
       skip_tests:
         description: 'Skip tests'
         required: false
@@ -30,7 +22,7 @@ env:
 
 jobs:
   test:
-    name: Run Tests
+    name: Run Tests (Development)
     runs-on: ubuntu-latest
     if: ${{ !inputs.skip_tests }}
     
@@ -76,7 +68,7 @@ jobs:
           npm run test:unit
 
   build:
-    name: Build Website
+    name: Build Website (Development)
     runs-on: ubuntu-latest
     needs: [test]
     if: always() && (needs.test.result == 'success' || needs.test.result == 'skipped')
@@ -126,10 +118,11 @@ jobs:
           cd logobox
           npm run build --workspace=website
         env:
-          NODE_ENV: production
+          NODE_ENV: development
           VITE_BUILD_TIME: ${{ github.run_id }}
           VITE_COMMIT_SHA: ${{ github.sha }}
           VITE_GITHUB_REPO: DevelopmentCats/LogoBox
+          VITE_ENVIRONMENT: development
       
       - name: Generate build info
         id: build-info
@@ -144,18 +137,17 @@ jobs:
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: website-build-${{ github.run_id }}
+          name: website-build-dev-${{ github.run_id }}
           path: logobox/website/dist/
           retention-days: 7
 
-  deploy-production:
-    name: Deploy to Production
+  deploy-development:
+    name: Deploy to Development
     runs-on: ubuntu-latest
     needs: [build]
-    if: github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && inputs.environment == 'production')
     environment:
-      name: production
-      url: https://logobox.com
+      name: development
+      url: https://dev.logobox.dev
     
     steps:
       - name: Checkout code
@@ -164,15 +156,15 @@ jobs:
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
-          name: website-build-${{ github.run_id }}
+          name: website-build-dev-${{ github.run_id }}
           path: logobox/website/dist/
       
-      - name: Deploy to Cloudflare Pages
+      - name: Deploy to Cloudflare Pages (Development)
         uses: cloudflare/pages-action@v1
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: logobox
+          projectName: logobox-dev
           directory: logobox/website/dist
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
           wranglerVersion: '3'
@@ -182,157 +174,90 @@ jobs:
       
       - name: Run smoke tests
         run: |
-          echo "🔍 Running production smoke tests..."
+          echo "🔍 Running development smoke tests..."
           
           # Test main page
-          if curl -f -s https://logobox.com/ > /dev/null; then
-            echo "✅ Main page accessible"
+          if curl -f -s https://dev.logobox.dev/ > /dev/null; then
+            echo "✅ Development main page accessible"
           else
-            echo "❌ Main page not accessible"
+            echo "❌ Development main page not accessible"
             exit 1
           fi
           
           # Test 404 page
-          if curl -f -s https://logobox.com/404.html > /dev/null; then
-            echo "✅ 404 page accessible"
+          if curl -f -s https://dev.logobox.dev/404.html > /dev/null; then
+            echo "✅ Development 404 page accessible"
           else
-            echo "❌ 404 page not accessible"
+            echo "❌ Development 404 page not accessible"
             exit 1
           fi
           
           # Test catalog endpoint
-          if curl -f -s https://logobox.com/catalog.json > /dev/null; then
-            echo "✅ Catalog accessible"
+          if curl -f -s https://dev.logobox.dev/catalog.json > /dev/null; then
+            echo "✅ Development catalog accessible"
           else
-            echo "❌ Catalog not accessible"
+            echo "❌ Development catalog not accessible"
             exit 1
           fi
           
           # Test sample logo
-          if curl -f -s https://logobox.com/logos/github/logo.svg > /dev/null; then
-            echo "✅ Sample logo accessible"
+          if curl -f -s https://dev.logobox.dev/logos/github/logo.svg > /dev/null; then
+            echo "✅ Development sample logo accessible"
           else
-            echo "❌ Sample logo not accessible"
+            echo "❌ Development sample logo not accessible"
             exit 1
           fi
       
       - name: Notify deployment success
         if: success()
         run: |
-          echo "🎉 Production deployment successful!"
-          echo "Website: https://logobox.com"
+          echo "🎉 Development deployment successful!"
+          echo "Development Website: https://dev.logobox.dev"
           echo "Build Hash: ${{ needs.build.outputs.build-hash }}"
           echo "Build Time: ${{ needs.build.outputs.build-time }}"
           echo "Commit: ${{ github.sha }}"
-
-  deploy-preview:
-    name: Deploy Preview
-    runs-on: ubuntu-latest
-    needs: [build]
-    if: github.event_name == 'workflow_dispatch' && inputs.environment == 'preview'
-    environment:
-      name: preview
-      url: https://preview.logobox.com
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: website-build-${{ github.run_id }}
-          path: logobox/website/dist/
-      
-      - name: Deploy to Cloudflare Pages (Preview)
-        uses: cloudflare/pages-action@v1
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: logobox-preview
-          directory: logobox/website/dist
-          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
-          wranglerVersion: '3'
-      
-      - name: Wait for deployment propagation
-        run: sleep 30
-      
-      - name: Run smoke tests
-        run: |
-          echo "🔍 Running preview smoke tests..."
-          
-          # Test main page
-          if curl -f -s https://preview.logobox.com/ > /dev/null; then
-            echo "✅ Preview main page accessible"
-          else
-            echo "❌ Preview main page not accessible"
-            exit 1
-          fi
-          
-          # Test catalog endpoint
-          if curl -f -s https://preview.logobox.com/catalog.json > /dev/null; then
-            echo "✅ Preview catalog accessible"
-          else
-            echo "❌ Preview catalog not accessible"
-            exit 1
-          fi
-      
-      - name: Notify preview deployment success
-        if: success()
-        run: |
-          echo "🎉 Preview deployment successful!"
-          echo "Preview URL: https://preview.logobox.com"
-          echo "Build Hash: ${{ needs.build.outputs.build-hash }}"
-          echo "Build Time: ${{ needs.build.outputs.build-time }}"
+          echo "Branch: development"
 
   rollback:
     name: Rollback on Failure
     runs-on: ubuntu-latest
-    if: failure() && (needs.deploy-production.result == 'failure' || needs.deploy-preview.result == 'failure')
-    needs: [deploy-production, deploy-preview]
+    if: failure() && needs.deploy-development.result == 'failure'
+    needs: [deploy-development]
     
     steps:
       - name: Notify rollback needed
         run: |
-          echo "❌ Deployment failed, manual rollback may be required"
+          echo "❌ Development deployment failed, manual rollback may be required"
           echo "Check Cloudflare Pages dashboard for deployment status"
           echo "Consider reverting to previous commit if necessary"
-          
-          if [[ "${{ needs.deploy-production.result }}" == "failure" ]]; then
-            echo "Production deployment failed"
-          fi
-          
-          if [[ "${{ needs.deploy-preview.result }}" == "failure" ]]; then
-            echo "Preview deployment failed"
-          fi
       
       - name: Create rollback issue
         uses: actions/github-script@v7
         with:
           script: |
-            const title = `🚨 Deployment Failure - Rollback Required`;
+            const title = `🚨 Development Deployment Failure - Rollback Required`;
             const body = `
-            ## Deployment Failure Report
+            ## Development Deployment Failure Report
             
             **Workflow Run:** [${context.runId}](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})
             **Commit:** ${context.sha}
-            **Branch:** ${context.ref}
+            **Branch:** development
             **Triggered by:** ${context.actor}
             
             ### Failed Jobs:
-            ${needs.deploy-production.result === 'failure' ? '- ❌ Production deployment' : ''}
-            ${needs.deploy-preview.result === 'failure' ? '- ❌ Preview deployment' : ''}
+            - ❌ Development deployment
             
             ### Next Steps:
             1. Check Cloudflare Pages dashboard for detailed error logs
             2. Review build artifacts and deployment configuration
-            3. Consider reverting to previous working commit
+            3. Consider reverting to previous working commit on development branch
             4. Fix underlying issues and redeploy
             
             ### Environment Information:
             - Node.js Version: ${process.env.NODE_VERSION}
             - Build Hash: ${{ needs.build.outputs.build-hash }}
             - Build Time: ${{ needs.build.outputs.build-time }}
+            - Target URL: https://dev.logobox.dev
             `;
             
             github.rest.issues.create({
@@ -340,13 +265,13 @@ jobs:
               repo: context.repo.repo,
               title: title,
               body: body,
-              labels: ['bug', 'deployment', 'urgent']
+              labels: ['bug', 'deployment', 'development']
             });
 
   notify:
     name: Send Notifications
     runs-on: ubuntu-latest
-    needs: [test, build, deploy-production, deploy-preview]
+    needs: [test, build, deploy-development]
     if: always()
     
     steps:
@@ -354,37 +279,36 @@ jobs:
         id: status
         run: |
           if [[ "${{ needs.test.result }}" == "failure" ]]; then
-            echo "status=❌ Tests Failed" >> $GITHUB_OUTPUT
+            echo "status=❌ Development Tests Failed" >> $GITHUB_OUTPUT
             echo "color=danger" >> $GITHUB_OUTPUT
           elif [[ "${{ needs.build.result }}" == "failure" ]]; then
-            echo "status=❌ Build Failed" >> $GITHUB_OUTPUT
+            echo "status=❌ Development Build Failed" >> $GITHUB_OUTPUT
             echo "color=danger" >> $GITHUB_OUTPUT
-          elif [[ "${{ needs.deploy-production.result }}" == "failure" ]]; then
-            echo "status=❌ Production Deployment Failed" >> $GITHUB_OUTPUT
+          elif [[ "${{ needs.deploy-development.result }}" == "failure" ]]; then
+            echo "status=❌ Development Deployment Failed" >> $GITHUB_OUTPUT
             echo "color=danger" >> $GITHUB_OUTPUT
-          elif [[ "${{ needs.deploy-preview.result }}" == "failure" ]]; then
-            echo "status=❌ Preview Deployment Failed" >> $GITHUB_OUTPUT
-            echo "color=warning" >> $GITHUB_OUTPUT
           else
-            echo "status=✅ Deployment Completed Successfully" >> $GITHUB_OUTPUT
+            echo "status=✅ Development Deployment Completed Successfully" >> $GITHUB_OUTPUT
             echo "color=good" >> $GITHUB_OUTPUT
           fi
       
       - name: Create deployment summary
         run: |
-          echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## Development Deployment Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Status:** ${{ steps.status.outputs.status }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Pipeline Steps:**" >> $GITHUB_STEP_SUMMARY
           echo "- Tests: ${{ needs.test.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- Build: ${{ needs.build.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Production Deploy: ${{ needs.deploy-production.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Preview Deploy: ${{ needs.deploy-preview.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Development Deploy: ${{ needs.deploy-development.result }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Build Information:**" >> $GITHUB_STEP_SUMMARY
           echo "- Build Hash: ${{ needs.build.outputs.build-hash }}" >> $GITHUB_STEP_SUMMARY
           echo "- Build Time: ${{ needs.build.outputs.build-time }}" >> $GITHUB_STEP_SUMMARY
           echo "- Commit: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Branch: development" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Development URL:** https://dev.logobox.dev" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Run Details:** [View workflow run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY

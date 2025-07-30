@@ -21,7 +21,9 @@
     "optimize-assets": "node scripts/optimizeAssets.js",
     "build-catalog": "node scripts/buildCatalog.js",
     "validate-metadata": "node scripts/validateMetadata.js",
-    "env-check": "node scripts/env-check.js"
+    "env-check": "node scripts/env-check.js",
+    "deploy:dev": "./deployment/scripts/deploy-dev.sh",
+    "deploy:dev:skip-tests": "./deployment/scripts/deploy-dev.sh --skip-tests"
   },
   "devDependencies": {
     "@playwright/test": "^1.40.0",

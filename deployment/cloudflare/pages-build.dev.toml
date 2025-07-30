@@ -1,0 +1,88 @@
+# Cloudflare Pages build configuration for development
+# This file provides development-specific build settings
+
+[build]
+# Build command for the website
+command = "npm run build --workspace=website"
+
+# Build output directory
+publish = "logobox/website/dist"
+
+# Root directory for the build
+base = "logobox"
+
+# Node.js version
+[build.environment]
+NODE_VERSION = "18"
+NPM_VERSION = "9"
+
+# Development build environment variables
+NODE_ENV = "development"
+VITE_BUILD_ANALYZE = "false"
+VITE_ENABLE_PERFORMANCE_MONITORING = "true"
+VITE_ENVIRONMENT = "development"
+
+# Build processing settings (less aggressive optimization for faster builds)
+[build.processing]
+# Enable CSS minification but keep readable
+css = { bundle = true, minify = false }
+
+# Enable JS bundling but minimal minification for debugging
+js = { bundle = true, minify = false }
+
+# Image optimization settings (faster processing)
+images = { 
+  formats = ["webp"],
+  quality = 90,
+  progressive = false
+}
+
+# Build timeout settings (shorter for development)
+[build.timeout]
+build = 300  # 5 minutes
+deploy = 180 # 3 minutes
+
+# Build caching for faster subsequent builds
+[build.cache]
+# Cache node_modules
+node_modules = true
+
+# Cache build artifacts
+build_cache = true
+
+# Shorter cache duration for development (4 hours)
+ttl = 14400
+
+# Build hooks for asset processing
+[build.hooks]
+# Pre-build hook for asset optimization
+pre_build = [
+  "npm run generate-variants",
+  "npm run optimize-assets", 
+  "npm run build-catalog"
+]
+
+# Post-build hook for verification (skip deployment tests in dev)
+post_build = [
+  "echo 'Development build completed'"
+]
+
+# Error handling (more lenient for development)
+[build.error_handling]
+# Continue build on warnings
+fail_on_warnings = false
+
+# Retry failed builds
+retry_on_failure = true
+max_retries = 1
+
+# Build notifications
+[build.notifications]
+# Enable build status notifications
+enabled = true
+
+# Notify on build failures
+on_failure = true
+
+# Notify on successful deployments for development
+on_success = true

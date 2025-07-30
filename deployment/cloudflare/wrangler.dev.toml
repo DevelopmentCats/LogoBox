@@ -1,0 +1,99 @@
+name = "logobox-dev"
+compatibility_date = "2024-01-01"
+
+# Build configuration for development
+[build]
+command = "npm run build --workspace=website"
+cwd = "logobox"
+publish = "logobox/website/dist"
+
+# Node.js version compatible with Cloudflare Pages
+[build.environment]
+NODE_VERSION = "18"
+NODE_ENV = "development"
+
+[env.development]
+name = "logobox-dev"
+# Development domain routes
+# routes = [
+#   { pattern = "dev.logobox.dev", zone_name = "logobox.dev" }
+# ]
+
+# Compression rules for text-based assets (same as production but for dev)
+[[env.development.rules]]
+type = "Text"
+globs = ["**/*.html"]
+[env.development.rules.result]
+compress = true
+
+[[env.development.rules]]
+type = "Text"
+globs = ["**/*.js", "**/*.css", "**/*.mjs"]
+[env.development.rules.result]
+compress = true
+
+[[env.development.rules]]
+type = "Text"
+globs = ["**/*.json", "**/*.xml", "**/*.txt", "**/*.svg"]
+[env.development.rules.result]
+compress = true
+
+# Shorter caching for development assets (easier debugging)
+[[env.development.rules]]
+type = "Text"
+globs = ["assets/**/*"]
+[env.development.rules.result]
+cache_control = "public, max-age=3600"
+
+# Logo assets caching with shorter duration for development
+[[env.development.rules]]
+type = "Text"
+globs = ["logos/**/*", "**/*.svg", "**/*.png", "**/*.jpg", "**/*.jpeg", "**/*.gif", "**/*.webp", "**/*.ico"]
+[env.development.rules.result]
+cache_control = "public, max-age=1800"
+
+# Catalog caching for development (shorter for faster updates)
+[[env.development.rules]]
+type = "Text"
+globs = ["catalog.json", "**/catalog.json"]
+[env.development.rules.result]
+cache_control = "public, max-age=300"
+
+# Font caching (same as production)
+[[env.development.rules]]
+type = "Text"
+globs = ["**/*.woff", "**/*.woff2", "**/*.ttf", "**/*.otf", "**/*.eot"]
+[env.development.rules.result]
+cache_control = "public, max-age=31536000, immutable"
+
+# Security headers for HTML files (relaxed for development)
+[[env.development.rules]]
+type = "Text"
+globs = ["**/*.html"]
+[env.development.rules.result.headers]
+"X-Frame-Options" = "SAMEORIGIN"
+"X-Content-Type-Options" = "nosniff"
+"Referrer-Policy" = "strict-origin-when-cross-origin"
+"Permissions-Policy" = "camera=(), microphone=(), geolocation=()"
+# More relaxed CSP for development debugging
+"Content-Security-Policy" = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' https: ws: wss:;"
+
+# Performance headers
+[[env.development.rules]]
+type = "Text"
+globs = ["**/*"]
+[env.development.rules.result.headers]
+"X-DNS-Prefetch-Control" = "on"
+"X-XSS-Protection" = "1; mode=block"
+# Development environment indicator
+"X-Environment" = "development"
+
+# CORS headers for API endpoints (more permissive for development)
+[[env.development.rules]]
+type = "Text"
+globs = ["/api/**/*", "**/*.json"]
+[env.development.rules.result.headers]
+"Access-Control-Allow-Origin" = "*"
+"Access-Control-Allow-Methods" = "GET, POST, PUT, DELETE, OPTIONS"
+"Access-Control-Allow-Headers" = "Content-Type, Authorization, X-Requested-With"
+"Access-Control-Allow-Credentials" = "true"
