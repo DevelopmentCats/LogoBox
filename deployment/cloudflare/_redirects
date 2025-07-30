@@ -1,0 +1,85 @@
+# SPA routing - redirect all non-asset requests to index.html (Requirement 5.4 - proper routing)
+/*    /index.html   200
+
+# API redirects for future API endpoints
+# /api/*  https://api.logobox.dev/:splat  200
+
+# Static asset optimization with long-term caching (Requirement 5.3 - performance optimization)
+/assets/*  /assets/:splat  200
+  Cache-Control: public, max-age=31536000, immutable
+  X-Content-Type-Options: nosniff
+
+# Logo assets with medium-term caching (Requirement 5.2 - logo optimization)
+/logos/*  /logos/:splat  200
+  Cache-Control: public, max-age=86400
+  X-Content-Type-Options: nosniff
+
+# Catalog caching for dynamic content (Requirement 5.2 - catalog generation)
+/catalog.json  /catalog.json  200
+  Cache-Control: public, max-age=3600
+  Content-Type: application/json
+
+# Favicon and PWA manifest files
+/favicon.ico  /favicon.ico  200
+  Cache-Control: public, max-age=86400
+  Content-Type: image/x-icon
+
+/manifest.json  /manifest.json  200
+  Cache-Control: public, max-age=86400
+  Content-Type: application/manifest+json
+
+# Font files with long-term caching
+/assets/fonts/*  /assets/fonts/:splat  200
+  Cache-Control: public, max-age=31536000, immutable
+  Access-Control-Allow-Origin: *
+
+# Image optimization
+/assets/images/*  /assets/images/:splat  200
+  Cache-Control: public, max-age=31536000, immutable
+  X-Content-Type-Options: nosniff
+
+# CSS and JS files with long-term caching
+/assets/styles/*  /assets/styles/:splat  200
+  Cache-Control: public, max-age=31536000, immutable
+  Content-Type: text/css
+
+/assets/*.js  /assets/:splat  200
+  Cache-Control: public, max-age=31536000, immutable
+  Content-Type: application/javascript
+
+/assets/*.mjs  /assets/:splat  200
+  Cache-Control: public, max-age=31536000, immutable
+  Content-Type: application/javascript
+
+# Security headers for HTML files
+/*.html
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' https:;
+  X-DNS-Prefetch-Control: on
+  X-XSS-Protection: 1; mode=block
+
+# Root HTML file
+/
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' https:;
+
+# CORS headers for API endpoints and JSON files
+/api/*
+  Access-Control-Allow-Origin: *
+  Access-Control-Allow-Methods: GET, POST, OPTIONS
+  Access-Control-Allow-Headers: Content-Type, Authorization
+  Access-Control-Max-Age: 86400
+
+# Handle 404s for SPA routing
+/404.html  /index.html  200
+
+# Preload critical resources
+/index.html
+  Link: </assets/styles/index.css>; rel=preload; as=style
+  Link: </assets/index.js>; rel=preload; as=script

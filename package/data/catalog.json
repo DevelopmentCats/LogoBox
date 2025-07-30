@@ -1,0 +1,47 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": "2024-01-01T00:00:00.000Z",
+  "logos": [
+    {
+      "name": "GitHub",
+      "slug": "github",
+      "description": "GitHub is a web-based version control and collaboration platform for software developers.",
+      "categories": ["technology", "development"],
+      "tags": ["git", "version-control", "collaboration", "code"],
+      "license": "MIT",
+      "variants": {
+        "original": "https://cdn.logobox.dev/logos/github/logo.svg",
+        "white": "https://cdn.logobox.dev/logos/github/logo-white.svg",
+        "black": "https://cdn.logobox.dev/logos/github/logo-black.svg",
+        "optimized": "https://cdn.logobox.dev/logos/github/logo-optimized.svg"
+      },
+      "formats": {
+        "svg": "https://cdn.logobox.dev/logos/github/logo.svg"
+      }
+    },
+    {
+      "name": "Microsoft",
+      "slug": "microsoft",
+      "description": "Microsoft Corporation is an American multinational technology company.",
+      "categories": ["technology", "enterprise"],
+      "tags": ["software", "cloud", "enterprise", "windows"],
+      "license": "MIT",
+      "variants": {
+        "original": "https://cdn.logobox.dev/logos/microsoft/logo.svg",
+        "white": "https://cdn.logobox.dev/logos/microsoft/logo-white.svg",
+        "black": "https://cdn.logobox.dev/logos/microsoft/logo-black.svg",
+        "optimized": "https://cdn.logobox.dev/logos/microsoft/logo-optimized.svg"
+      },
+      "formats": {
+        "svg": "https://cdn.logobox.dev/logos/microsoft/logo.svg"
+      }
+    }
+  ],
+  "categories": ["technology", "development", "enterprise"],
+  "tags": ["git", "version-control", "collaboration", "code", "software", "cloud", "enterprise", "windows"],
+  "stats": {
+    "totalLogos": 2,
+    "totalCategories": 3,
+    "totalTags": 8
+  }
+}

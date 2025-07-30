@@ -1,0 +1,399 @@
+{
+  "production": {
+    "description": "Production environment variables for Cloudflare Pages",
+    "variables": {
+      "VITE_APP_TITLE": {
+        "value": "LogoBox",
+        "description": "Application title displayed in browser and meta tags",
+        "type": "string",
+        "required": true,
+        "public": true
+      },
+      "VITE_APP_DESCRIPTION": {
+        "value": "Browse and discover high-quality logos and icons",
+        "description": "Application description for SEO and meta tags",
+        "type": "string",
+        "required": true,
+        "public": true
+      },
+      "VITE_API_BASE_URL": {
+        "value": "https://api.logobox.dev",
+        "description": "Base URL for LogoBox API endpoints",
+        "type": "url",
+        "required": true,
+        "public": true
+      },
+      "VITE_CDN_BASE_URL": {
+        "value": "https://cdn.logobox.dev",
+        "description": "CDN base URL for serving logo assets",
+        "type": "url",
+        "required": true,
+        "public": true
+      },
+      "VITE_CATALOG_PATH": {
+        "value": "/catalog.json",
+        "description": "Path to the logo catalog JSON file (relative to CDN base URL)",
+        "type": "string",
+        "required": true,
+        "public": true
+      },
+      "VITE_LOGOS_PATH": {
+        "value": "/logos",
+        "description": "Path to the logos directory (relative to CDN base URL)",
+        "type": "string",
+        "required": true,
+        "public": true
+      },
+      "VITE_CDN_FALLBACK_URL_1": {
+        "value": "https://backup-cdn1.logobox.dev",
+        "description": "Primary fallback CDN URL for high availability",
+        "type": "url",
+        "required": false,
+        "public": true
+      },
+      "VITE_CDN_FALLBACK_URL_2": {
+        "value": "https://backup-cdn2.logobox.dev",
+        "description": "Secondary fallback CDN URL for high availability",
+        "type": "url",
+        "required": false,
+        "public": true
+      },
+      "VITE_API_TIMEOUT": {
+        "value": "15000",
+        "description": "API request timeout in milliseconds",
+        "type": "number",
+        "required": true,
+        "public": true,
+        "validation": {
+          "min": 5000,
+          "max": 30000
+        }
+      },
+      "VITE_API_RETRY_ATTEMPTS": {
+        "value": "3",
+        "description": "Number of retry attempts for failed API requests",
+        "type": "number",
+        "required": true,
+        "public": true,
+        "validation": {
+          "min": 1,
+          "max": 5
+        }
+      },
+      "VITE_API_RETRY_DELAY": {
+        "value": "2000",
+        "description": "Delay between retry attempts in milliseconds",
+        "type": "number",
+        "required": true,
+        "public": true,
+        "validation": {
+          "min": 500,
+          "max": 5000
+        }
+      },
+      "VITE_ENABLE_ANALYTICS": {
+        "value": "true",
+        "description": "Enable analytics tracking in production",
+        "type": "boolean",
+        "required": true,
+        "public": true
+      },
+      "VITE_ENABLE_PERFORMANCE_MONITORING": {
+        "value": "false",
+        "description": "Enable performance monitoring (disabled in production to reduce overhead)",
+        "type": "boolean",
+        "required": true,
+        "public": true
+      },
+      "VITE_LOG_LEVEL": {
+        "value": "warn",
+        "description": "Logging level for production environment",
+        "type": "string",
+        "required": true,
+        "public": true,
+        "validation": {
+          "enum": ["debug", "info", "warn", "error"]
+        }
+      },
+      "LOGOBOX_BASE_URL": {
+        "value": "https://logobox.dev",
+        "description": "Base URL for LogoBox package API calls",
+        "type": "url",
+        "required": true,
+        "public": false
+      },
+      "LOGOBOX_CDN_BASE_URL": {
+        "value": "https://cdn.logobox.dev",
+        "description": "CDN Base URL for LogoBox package asset retrieval",
+        "type": "url",
+        "required": true,
+        "public": false
+      },
+      "LOGOBOX_DEFAULT_VARIANT": {
+        "value": "original",
+        "description": "Default logo variant for package usage",
+        "type": "string",
+        "required": true,
+        "public": false,
+        "validation": {
+          "enum": ["original", "optimized", "black", "white"]
+        }
+      },
+      "LOGOBOX_CACHE_ENABLED": {
+        "value": "true",
+        "description": "Enable caching in the LogoBox package",
+        "type": "boolean",
+        "required": true,
+        "public": false
+      },
+      "LOGOBOX_CACHE_TTL": {
+        "value": "3600000",
+        "description": "Cache TTL (Time To Live) in milliseconds for package cache (1 hour)",
+        "type": "number",
+        "required": true,
+        "public": false,
+        "validation": {
+          "min": 300000,
+          "max": 86400000
+        }
+      },
+      "LOGOBOX_API_BASE_URL": {
+        "value": "https://api.logobox.dev",
+        "description": "LogoBox API base URL for dynamic generation features",
+        "type": "url",
+        "required": true,
+        "public": false
+      }
+    }
+  },
+  "preview": {
+    "description": "Preview environment variables for Cloudflare Pages (pull requests and development branches)",
+    "variables": {
+      "VITE_APP_TITLE": {
+        "value": "LogoBox (Preview)",
+        "description": "Application title for preview environment",
+        "type": "string",
+        "required": true,
+        "public": true
+      },
+      "VITE_APP_DESCRIPTION": {
+        "value": "Browse and discover high-quality logos and icons - Preview Environment",
+        "description": "Application description for preview environment",
+        "type": "string",
+        "required": true,
+        "public": true
+      },
+      "VITE_API_BASE_URL": {
+        "value": "https://api.logobox.dev",
+        "description": "Base URL for LogoBox API endpoints (same as production for consistency)",
+        "type": "url",
+        "required": true,
+        "public": true
+      },
+      "VITE_CDN_BASE_URL": {
+        "value": "https://cdn.logobox.dev",
+        "description": "CDN base URL for serving logo assets (same as production)",
+        "type": "url",
+        "required": true,
+        "public": true
+      },
+      "VITE_CATALOG_PATH": {
+        "value": "/catalog.json",
+        "description": "Path to the logo catalog JSON file",
+        "type": "string",
+        "required": true,
+        "public": true
+      },
+      "VITE_LOGOS_PATH": {
+        "value": "/logos",
+        "description": "Path to the logos directory",
+        "type": "string",
+        "required": true,
+        "public": true
+      },
+      "VITE_CDN_FALLBACK_URL_1": {
+        "value": "https://backup-cdn1.logobox.dev",
+        "description": "Primary fallback CDN URL",
+        "type": "url",
+        "required": false,
+        "public": true
+      },
+      "VITE_CDN_FALLBACK_URL_2": {
+        "value": "https://backup-cdn2.logobox.dev",
+        "description": "Secondary fallback CDN URL",
+        "type": "url",
+        "required": false,
+        "public": true
+      },
+      "VITE_API_TIMEOUT": {
+        "value": "10000",
+        "description": "API request timeout in milliseconds (shorter for faster feedback in preview)",
+        "type": "number",
+        "required": true,
+        "public": true,
+        "validation": {
+          "min": 5000,
+          "max": 30000
+        }
+      },
+      "VITE_API_RETRY_ATTEMPTS": {
+        "value": "2",
+        "description": "Number of retry attempts (fewer for faster feedback)",
+        "type": "number",
+        "required": true,
+        "public": true,
+        "validation": {
+          "min": 1,
+          "max": 5
+        }
+      },
+      "VITE_API_RETRY_DELAY": {
+        "value": "1000",
+        "description": "Delay between retry attempts (shorter for faster feedback)",
+        "type": "number",
+        "required": true,
+        "public": true,
+        "validation": {
+          "min": 500,
+          "max": 5000
+        }
+      },
+      "VITE_ENABLE_ANALYTICS": {
+        "value": "false",
+        "description": "Disable analytics in preview to avoid polluting production data",
+        "type": "boolean",
+        "required": true,
+        "public": true
+      },
+      "VITE_ENABLE_PERFORMANCE_MONITORING": {
+        "value": "true",
+        "description": "Enable performance monitoring for debugging in preview",
+        "type": "boolean",
+        "required": true,
+        "public": true
+      },
+      "VITE_LOG_LEVEL": {
+        "value": "debug",
+        "description": "More verbose logging for preview environment debugging",
+        "type": "string",
+        "required": true,
+        "public": true,
+        "validation": {
+          "enum": ["debug", "info", "warn", "error"]
+        }
+      },
+      "LOGOBOX_BASE_URL": {
+        "value": "https://logobox.dev",
+        "description": "Base URL for LogoBox package API calls (same as production)",
+        "type": "url",
+        "required": true,
+        "public": false
+      },
+      "LOGOBOX_CDN_BASE_URL": {
+        "value": "https://cdn.logobox.dev",
+        "description": "CDN Base URL for LogoBox package (same as production)",
+        "type": "url",
+        "required": true,
+        "public": false
+      },
+      "LOGOBOX_DEFAULT_VARIANT": {
+        "value": "original",
+        "description": "Default logo variant for package usage",
+        "type": "string",
+        "required": true,
+        "public": false,
+        "validation": {
+          "enum": ["original", "optimized", "black", "white"]
+        }
+      },
+      "LOGOBOX_CACHE_ENABLED": {
+        "value": "true",
+        "description": "Enable caching in the LogoBox package",
+        "type": "boolean",
+        "required": true,
+        "public": false
+      },
+      "LOGOBOX_CACHE_TTL": {
+        "value": "1800000",
+        "description": "Cache TTL in milliseconds for preview (30 minutes - shorter for faster iteration)",
+        "type": "number",
+        "required": true,
+        "public": false,
+        "validation": {
+          "min": 300000,
+          "max": 86400000
+        }
+      },
+      "LOGOBOX_API_BASE_URL": {
+        "value": "https://api.logobox.dev",
+        "description": "LogoBox API base URL for dynamic generation features",
+        "type": "url",
+        "required": true,
+        "public": false
+      }
+    }
+  },
+  "metadata": {
+    "version": "1.0.0",
+    "lastUpdated": "2024-01-01",
+    "description": "Environment variable configuration for LogoBox Cloudflare Pages deployment",
+    "notes": [
+      "Variables prefixed with VITE_ are exposed to the frontend bundle",
+      "Variables without VITE_ prefix are build-time only",
+      "All URLs should use HTTPS in production",
+      "Timeout values are in milliseconds",
+      "Cache TTL values are in milliseconds",
+      "Boolean values should be 'true' or 'false' strings",
+      "Log levels: debug, info, warn, error",
+      "Logo variants: original, optimized, black, white"
+    ],
+    "security": [
+      "Never include API keys, tokens, or secrets in environment variables",
+      "All sensitive authentication data should be handled through GitHub Secrets",
+      "Environment variables in Cloudflare Pages are visible in build logs",
+      "Use HTTPS for all URLs in production"
+    ],
+    "validation": {
+      "required_production": [
+        "VITE_APP_TITLE",
+        "VITE_APP_DESCRIPTION", 
+        "VITE_API_BASE_URL",
+        "VITE_CDN_BASE_URL",
+        "VITE_CATALOG_PATH",
+        "VITE_LOGOS_PATH",
+        "VITE_API_TIMEOUT",
+        "VITE_API_RETRY_ATTEMPTS",
+        "VITE_API_RETRY_DELAY",
+        "VITE_ENABLE_ANALYTICS",
+        "VITE_ENABLE_PERFORMANCE_MONITORING",
+        "VITE_LOG_LEVEL",
+        "LOGOBOX_BASE_URL",
+        "LOGOBOX_CDN_BASE_URL",
+        "LOGOBOX_DEFAULT_VARIANT",
+        "LOGOBOX_CACHE_ENABLED",
+        "LOGOBOX_CACHE_TTL",
+        "LOGOBOX_API_BASE_URL"
+      ],
+      "url_variables": [
+        "VITE_API_BASE_URL",
+        "VITE_CDN_BASE_URL",
+        "VITE_CDN_FALLBACK_URL_1",
+        "VITE_CDN_FALLBACK_URL_2",
+        "LOGOBOX_BASE_URL",
+        "LOGOBOX_CDN_BASE_URL",
+        "LOGOBOX_API_BASE_URL"
+      ],
+      "boolean_variables": [
+        "VITE_ENABLE_ANALYTICS",
+        "VITE_ENABLE_PERFORMANCE_MONITORING",
+        "LOGOBOX_CACHE_ENABLED"
+      ],
+      "number_variables": [
+        "VITE_API_TIMEOUT",
+        "VITE_API_RETRY_ATTEMPTS",
+        "VITE_API_RETRY_DELAY",
+        "LOGOBOX_CACHE_TTL"
+      ]
+    }
+  }
+}

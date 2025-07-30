@@ -1,0 +1,105 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# Environment files (IMPORTANT: Exclude all .env files)
+.env
+.env.*
+.env.local
+.env.development
+.env.development.local
+.env.test
+.env.test.local
+.env.production
+.env.production.local
+.env.*.local
+**/.env
+**/.env.*
+!**/.env.example
+
+# Deployment secrets and keys
+deployment/secrets/
+*.key
+*.pem
+*.p12
+*.pfx
+secrets.json
+config/secrets/
+
+# IDE files
+.vscode/settings.json
+.vscode/launch.json
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# Temporary folders
+tmp/
+temp/
+
+# Cache directories
+.cache/
+cache/
+.npm
+.eslintcache
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# Cloudflare deployment artifacts
+.wrangler/
+wrangler.toml.backup
+.cloudflare/
+
+# CI/CD artifacts
+.github/secrets/
+ci-artifacts/
+deployment-logs/
+build-artifacts/
+
+# Security and authentication
+auth.json
+credentials.json
+service-account.json
+*.token
+
+# Package manager files
+package-lock.json.backup
+yarn.lock.backup
+
+# Test artifacts
+test-results/
+playwright-report/
+test-artifacts/
+
+# Performance monitoring
+.lighthouse/
+performance-reports/

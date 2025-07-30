@@ -1,0 +1,371 @@
+name: Pull Request Preview
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+    branches: [main]
+    paths:
+      - 'logobox/website/**'
+      - 'logobox/assets/**'
+      - 'logobox/package/**'
+      - '.env.example'
+      - '.github/workflows/**'
+  pull_request_target:
+    types: [opened, synchronize, reopened, closed]
+    branches: [main]
+    paths:
+      - 'logobox/website/**'
+      - 'logobox/assets/**'
+      - 'logobox/package/**'
+      - '.env.example'
+      - '.github/workflows/**'
+
+env:
+  NODE_VERSION: '18'
+
+jobs:
+  # Cleanup job runs when PR is closed or merged
+  cleanup-preview:
+    name: Cleanup Preview Deployment
+    runs-on: ubuntu-latest
+    if: github.event.action == 'closed'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Delete preview deployment
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: logobox-preview-pr-${{ github.event.number }}
+          directory: logobox/website/dist
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          wranglerVersion: '3'
+        continue-on-error: true
+      
+      - name: Comment on PR about cleanup
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = context.payload.pull_request.number;
+            const comment = `🧹 **Preview Cleanup Complete**
+            
+            The preview deployment for this PR has been cleaned up.
+            
+            - Preview URL: \`https://logobox-preview-pr-${prNumber}.pages.dev\` (no longer accessible)
+            - Cleanup completed at: ${new Date().toISOString()}
+            `;
+            
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: comment
+            });
+
+  # Main preview deployment job
+  deploy-preview:
+    name: Deploy PR Preview
+    runs-on: ubuntu-latest
+    if: github.event.action != 'closed'
+    
+    outputs:
+      preview-url: ${{ steps.deploy.outputs.url }}
+      build-hash: ${{ steps.build-info.outputs.hash }}
+      build-time: ${{ steps.build-info.outputs.time }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # Use pull_request_target for external PRs, pull_request for internal PRs
+          ref: ${{ github.event_name == 'pull_request_target' && github.event.pull_request.head.sha || github.sha }}
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: logobox/package-lock.json
+      
+      - name: Install dependencies
+        run: |
+          cd logobox
+          npm ci
+      
+      - name: Run environment check
+        run: |
+          cd logobox
+          npm run env-check
+      
+      - name: Run tests
+        run: |
+          cd logobox
+          npm run test:unit
+          npm run test:integration
+      
+      - name: Run website tests
+        run: |
+          cd logobox/website
+          npm run test:unit
+      
+      - name: Run package tests
+        run: |
+          cd logobox/package
+          npm run test:unit
+      
+      - name: Validate metadata
+        run: |
+          cd logobox
+          npm run validate-metadata
+      
+      - name: Generate logo variants
+        run: |
+          cd logobox
+          npm run generate-variants
+      
+      - name: Optimize assets
+        run: |
+          cd logobox
+          npm run optimize-assets
+      
+      - name: Build catalog
+        run: |
+          cd logobox
+          npm run build-catalog
+      
+      - name: Build website for preview
+        run: |
+          cd logobox
+          npm run build --workspace=website
+        env:
+          NODE_ENV: production
+          VITE_BUILD_TIME: ${{ github.run_id }}
+          VITE_COMMIT_SHA: ${{ github.event_name == 'pull_request_target' && github.event.pull_request.head.sha || github.sha }}
+          VITE_GITHUB_REPO: DevelopmentCats/LogoBox
+          VITE_PREVIEW_MODE: true
+          VITE_PR_NUMBER: ${{ github.event.number }}
+      
+      - name: Generate build info
+        id: build-info
+        run: |
+          BUILD_HASH=$(find logobox/website/dist -type f -exec sha256sum {} \; | sha256sum | cut -d' ' -f1)
+          BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          echo "hash=${BUILD_HASH}" >> $GITHUB_OUTPUT
+          echo "time=${BUILD_TIME}" >> $GITHUB_OUTPUT
+          echo "Build hash: ${BUILD_HASH}"
+          echo "Build time: ${BUILD_TIME}"
+      
+      - name: Deploy to Cloudflare Pages Preview
+        id: deploy
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: logobox-preview-pr-${{ github.event.number }}
+          directory: logobox/website/dist
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          wranglerVersion: '3'
+      
+      - name: Wait for deployment propagation
+        run: sleep 15
+      
+      - name: Run preview smoke tests
+        id: smoke-tests
+        run: |
+          PREVIEW_URL="https://logobox-preview-pr-${{ github.event.number }}.pages.dev"
+          echo "preview-url=${PREVIEW_URL}" >> $GITHUB_OUTPUT
+          
+          echo "🔍 Running preview smoke tests for: ${PREVIEW_URL}"
+          
+          # Test main page
+          if curl -f -s "${PREVIEW_URL}/" > /dev/null; then
+            echo "✅ Preview main page accessible"
+          else
+            echo "❌ Preview main page not accessible"
+            exit 1
+          fi
+          
+          # Test catalog endpoint
+          if curl -f -s "${PREVIEW_URL}/catalog.json" > /dev/null; then
+            echo "✅ Preview catalog accessible"
+          else
+            echo "❌ Preview catalog not accessible"
+            exit 1
+          fi
+          
+          # Test sample logo (if exists)
+          if curl -f -s "${PREVIEW_URL}/logos/github/logo.svg" > /dev/null; then
+            echo "✅ Sample logo accessible"
+          else
+            echo "⚠️ Sample logo not accessible (may be expected for new PRs)"
+          fi
+          
+          echo "🎉 Preview smoke tests completed successfully!"
+
+  # Comment on PR with preview information
+  comment-preview:
+    name: Comment on PR
+    runs-on: ubuntu-latest
+    needs: [deploy-preview]
+    if: github.event.action != 'closed' && (success() || failure())
+    
+    steps:
+      - name: Comment on PR with preview info
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = context.payload.pull_request.number;
+            const success = '${{ needs.deploy-preview.result }}' === 'success';
+            const previewUrl = `https://logobox-preview-pr-${prNumber}.pages.dev`;
+            const buildHash = '${{ needs.deploy-preview.outputs.build-hash }}';
+            const buildTime = '${{ needs.deploy-preview.outputs.build-time }}';
+            const commitSha = '${{ github.event_name == 'pull_request_target' && github.event.pull_request.head.sha || github.sha }}';
+            
+            let comment;
+            
+            if (success) {
+              comment = `🚀 **Preview Deployment Successful**
+              
+              Your changes have been deployed to a preview environment!
+              
+              **Preview URL:** ${previewUrl}
+              
+              **Build Information:**
+              - Build Hash: \`${buildHash}\`
+              - Build Time: \`${buildTime}\`
+              - Commit: \`${commitSha.substring(0, 7)}\`
+              - PR: #${prNumber}
+              
+              **What's included in this preview:**
+              - ✅ Website with your changes
+              - ✅ Logo catalog and assets
+              - ✅ All optimizations and processing
+              
+              **Testing your changes:**
+              - Browse the website to see your changes in action
+              - Test any new features or modifications
+              - Verify that existing functionality still works
+              
+              The preview will be automatically updated when you push new commits to this PR.
+              
+              ---
+              *This preview will be automatically cleaned up when the PR is closed or merged.*`;
+            } else {
+              comment = `❌ **Preview Deployment Failed**
+              
+              The preview deployment for this PR has failed. Please check the workflow logs for details.
+              
+              **Workflow Run:** [View Details](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})
+              **Commit:** \`${commitSha.substring(0, 7)}\`
+              **PR:** #${prNumber}
+              
+              **Common issues to check:**
+              - Build errors in your code changes
+              - Test failures
+              - Asset processing issues
+              - Environment variable problems
+              
+              Please fix the issues and push new commits to retry the deployment.`;
+            }
+            
+            // Check if there's already a preview comment to update
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber
+            });
+            
+            const existingComment = comments.data.find(comment => 
+              comment.body.includes('**Preview Deployment') && 
+              comment.user.type === 'Bot'
+            );
+            
+            if (existingComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existingComment.id,
+                body: comment
+              });
+            } else {
+              // Create new comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body: comment
+              });
+            }
+
+  # Security check for external PRs
+  security-check:
+    name: Security Check
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request_target'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      
+      - name: Check for suspicious changes
+        run: |
+          echo "🔍 Performing security check for external PR..."
+          
+          # Check for changes to workflow files
+          if git diff --name-only origin/main...HEAD | grep -E "\.github/workflows/.*\.yml$"; then
+            echo "⚠️ Workflow files modified in external PR"
+            echo "Manual review required before deployment"
+            exit 1
+          fi
+          
+          # Check for changes to package.json that might introduce malicious dependencies
+          if git diff --name-only origin/main...HEAD | grep -E "package\.json$"; then
+            echo "⚠️ package.json modified in external PR"
+            echo "Please review dependency changes carefully"
+            
+            # Show the diff for package.json files
+            git diff origin/main...HEAD -- "*/package.json"
+          fi
+          
+          # Check for new executable files
+          if git diff --name-only --diff-filter=A origin/main...HEAD | xargs -I {} sh -c 'test -x "{}" && echo "New executable: {}"'; then
+            echo "⚠️ New executable files detected"
+            echo "Manual review required"
+          fi
+          
+          echo "✅ Basic security check completed"
+
+  # Notify about preview status
+  notify-status:
+    name: Notify Status
+    runs-on: ubuntu-latest
+    needs: [deploy-preview, comment-preview]
+    if: always() && github.event.action != 'closed'
+    
+    steps:
+      - name: Create workflow summary
+        run: |
+          echo "## PR Preview Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**PR Number:** #${{ github.event.number }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** ${{ needs.deploy-preview.result == 'success' && '✅ Success' || '❌ Failed' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ needs.deploy-preview.result }}" == "success" ]]; then
+            echo "**Preview URL:** https://logobox-preview-pr-${{ github.event.number }}.pages.dev" >> $GITHUB_STEP_SUMMARY
+            echo "**Build Hash:** ${{ needs.deploy-preview.outputs.build-hash }}" >> $GITHUB_STEP_SUMMARY
+            echo "**Build Time:** ${{ needs.deploy-preview.outputs.build-time }}" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "**Error:** Preview deployment failed. Check the logs above for details." >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.event_name == 'pull_request_target' && github.event.pull_request.head.sha || github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Author:** ${{ github.event.pull_request.user.login }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Run Details:** [View workflow run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY

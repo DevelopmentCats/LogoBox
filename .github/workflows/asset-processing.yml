@@ -1,0 +1,490 @@
+name: Asset Processing Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'logobox/assets/logos/**'
+      - 'logobox/scripts/**'
+      - '.github/workflows/asset-processing.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'logobox/assets/logos/**'
+      - 'logobox/scripts/**'
+  workflow_dispatch:
+    inputs:
+      skip_validation:
+        description: 'Skip metadata validation'
+        required: false
+        default: false
+        type: boolean
+      force_regenerate:
+        description: 'Force regenerate all variants'
+        required: false
+        default: false
+        type: boolean
+      deploy_to_cdn:
+        description: 'Deploy to CDN after processing'
+        required: false
+        default: true
+        type: boolean
+      environment:
+        description: 'Deployment environment'
+        required: false
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+env:
+  NODE_VERSION: '18'
+  AWS_REGION: 'us-east-1'
+
+jobs:
+  validate-assets:
+    name: Validate Logo Assets
+    runs-on: ubuntu-latest
+    if: ${{ !inputs.skip_validation }}
+    
+    outputs:
+      validation-passed: ${{ steps.validation.outputs.passed }}
+      logos-changed: ${{ steps.changes.outputs.logos }}
+      total-logos: ${{ steps.validation.outputs.total }}
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2  # Need 2 commits to detect changes
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: logobox/package-lock.json
+      
+      - name: Install dependencies
+        run: |
+          cd logobox
+          npm ci
+      
+      - name: Detect changed logos
+        id: changes
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "logos=all" >> $GITHUB_OUTPUT
+          else
+            CHANGED_LOGOS=$(git diff --name-only HEAD~1 HEAD -- logobox/assets/logos/ | grep -E '^logobox/assets/logos/[^/]+/' | cut -d'/' -f4 | sort -u | tr '\n' ',' | sed 's/,$//')
+            echo "logos=${CHANGED_LOGOS:-none}" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Validate metadata files
+        id: validation
+        run: |
+          cd logobox
+          
+          echo "🔍 Validating logo metadata..."
+          
+          if [[ "${{ steps.changes.outputs.logos }}" == "none" ]]; then
+            echo "No logo changes detected, skipping validation"
+            echo "passed=true" >> $GITHUB_OUTPUT
+            echo "total=0" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          # Run metadata validation
+          if node scripts/validateMetadata.js; then
+            echo "passed=true" >> $GITHUB_OUTPUT
+            TOTAL=$(find assets/logos -name "metadata.json" | wc -l)
+            echo "total=$TOTAL" >> $GITHUB_OUTPUT
+            echo "✅ All metadata validation passed"
+          else
+            echo "passed=false" >> $GITHUB_OUTPUT
+            echo "❌ Metadata validation failed"
+            exit 1
+          fi
+      
+      - name: Check file sizes
+        run: |
+          cd logobox/assets/logos
+          
+          echo "📊 Checking logo file sizes..."
+          
+          LARGE_FILES=""
+          while IFS= read -r -d '' file; do
+            SIZE=$(stat -f%z "$file" 2>/dev/null || stat -c%s "$file" 2>/dev/null)
+            if [[ $SIZE -gt 102400 ]]; then  # 100KB limit
+              LARGE_FILES="${LARGE_FILES}${file} ($(($SIZE / 1024))KB)\n"
+            fi
+          done < <(find . -name "*.svg" -print0)
+          
+          if [[ -n "$LARGE_FILES" ]]; then
+            echo "⚠️  Warning: Large SVG files detected:"
+            echo -e "$LARGE_FILES"
+            echo "Consider optimizing these files to reduce size"
+          else
+            echo "✅ All SVG files are within size limits"
+          fi
+      
+      - name: Validate SVG structure
+        run: |
+          cd logobox/assets/logos
+          
+          echo "🔍 Validating SVG structure..."
+          
+          INVALID_SVGS=""
+          while IFS= read -r -d '' file; do
+            if ! xmllint --noout "$file" 2>/dev/null; then
+              INVALID_SVGS="${INVALID_SVGS}${file}\n"
+            fi
+          done < <(find . -name "*.svg" -print0)
+          
+          if [[ -n "$INVALID_SVGS" ]]; then
+            echo "❌ Invalid SVG files detected:"
+            echo -e "$INVALID_SVGS"
+            exit 1
+          else
+            echo "✅ All SVG files have valid structure"
+          fi
+
+  process-assets:
+    name: Process Logo Assets
+    runs-on: ubuntu-latest
+    needs: [validate-assets]
+    if: always() && (needs.validate-assets.result == 'success' || needs.validate-assets.result == 'skipped')
+    
+    outputs:
+      processing-summary: ${{ steps.summary.outputs.summary }}
+      variants-generated: ${{ steps.variants.outputs.count }}
+      assets-optimized: ${{ steps.optimize.outputs.count }}
+      catalog-updated: ${{ steps.catalog.outputs.updated }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: logobox/package-lock.json
+      
+      - name: Install dependencies
+        run: |
+          cd logobox
+          npm ci
+      
+      - name: Generate logo variants
+        id: variants
+        run: |
+          cd logobox
+          
+          echo "🎨 Generating logo variants..."
+          
+          if [[ "${{ inputs.force_regenerate }}" == "true" ]]; then
+            echo "Force regenerating all variants..."
+            # Remove existing variants to force regeneration
+            find assets/logos -name "*-white.svg" -delete
+            find assets/logos -name "*-black.svg" -delete
+            find assets/logos -name "*-optimized.svg" -delete
+          fi
+          
+          # Generate variants
+          if node scripts/generateLogoVariants.js; then
+            GENERATED=$(find assets/logos -name "*-white.svg" -o -name "*-black.svg" | wc -l)
+            echo "count=$GENERATED" >> $GITHUB_OUTPUT
+            echo "✅ Generated $GENERATED logo variants"
+          else
+            echo "❌ Failed to generate logo variants"
+            exit 1
+          fi
+      
+      - name: Optimize assets
+        id: optimize
+        run: |
+          cd logobox
+          
+          echo "⚡ Optimizing logo assets..."
+          
+          # Run asset optimization
+          if node scripts/optimizeAssets.js; then
+            OPTIMIZED=$(find assets/logos -name "*.svg" | wc -l)
+            echo "count=$OPTIMIZED" >> $GITHUB_OUTPUT
+            echo "✅ Optimized $OPTIMIZED logo assets"
+          else
+            echo "❌ Failed to optimize assets"
+            exit 1
+          fi
+      
+      - name: Build catalog
+        id: catalog
+        run: |
+          cd logobox
+          
+          echo "📚 Building logo catalog..."
+          
+          CATALOG_BEFORE=""
+          if [[ -f "assets/catalog.json" ]]; then
+            CATALOG_BEFORE=$(stat -f%z "assets/catalog.json" 2>/dev/null || stat -c%s "assets/catalog.json" 2>/dev/null)
+          fi
+          
+          # Generate catalog
+          if node scripts/buildCatalog.js; then
+            CATALOG_AFTER=$(stat -f%z "assets/catalog.json" 2>/dev/null || stat -c%s "assets/catalog.json" 2>/dev/null)
+            
+            if [[ "$CATALOG_BEFORE" != "$CATALOG_AFTER" ]]; then
+              echo "updated=true" >> $GITHUB_OUTPUT
+              echo "✅ Catalog updated ($(($CATALOG_AFTER / 1024))KB)"
+            else
+              echo "updated=false" >> $GITHUB_OUTPUT
+              echo "ℹ️  Catalog unchanged"
+            fi
+          else
+            echo "❌ Failed to build catalog"
+            exit 1
+          fi
+      
+      - name: Run asset tests
+        run: |
+          cd logobox
+          
+          echo "🧪 Running asset processing tests..."
+          
+          # Run relevant tests
+          npm run test -- --testPathPattern="(generateLogoVariants|optimizeAssets|buildCatalog|validateMetadata)" --verbose
+      
+      - name: Generate processing summary
+        id: summary
+        run: |
+          cd logobox
+          
+          SUMMARY=$(cat << EOF
+          ## Asset Processing Summary
+          
+          **Validation Results:**
+          - Total logos: ${{ needs.validate-assets.outputs.total }}
+          - Validation: ${{ needs.validate-assets.outputs.validation-passed == 'true' && '✅ Passed' || '❌ Failed' }}
+          
+          **Processing Results:**
+          - Variants generated: ${{ steps.variants.outputs.count }}
+          - Assets optimized: ${{ steps.optimize.outputs.count }}
+          - Catalog updated: ${{ steps.catalog.outputs.updated == 'true' && '✅ Yes' || 'ℹ️ No changes' }}
+          
+          **Timestamp:** $(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          EOF
+          )
+          
+          echo "summary<<EOF" >> $GITHUB_OUTPUT
+          echo "$SUMMARY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+      
+      - name: Upload processing artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: processed-assets-${{ github.run_id }}
+          path: |
+            logobox/assets/
+            !logobox/assets/**/*.backup
+            !logobox/assets/**/*.tmp
+          retention-days: 7
+
+  deploy-staging:
+    name: Deploy to Staging CDN
+    runs-on: ubuntu-latest
+    needs: [process-assets]
+    if: github.ref == 'refs/heads/main' && needs.process-assets.outputs.catalog-updated == 'true'
+    environment:
+      name: staging
+      url: https://cdn-staging.logobox.com
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      
+      - name: Download processed assets
+        uses: actions/download-artifact@v4
+        with:
+          name: processed-assets-${{ github.run_id }}
+          path: logobox/
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Deploy to staging CDN
+        run: |
+          cd logobox
+          npm install --production=false
+          
+          node scripts/deployToCDN.js \
+            --bucket ${{ secrets.STAGING_CDN_BUCKET }} \
+            --distribution-id ${{ secrets.STAGING_DISTRIBUTION_ID }} \
+            --region ${{ env.AWS_REGION }}
+      
+      - name: Verify deployment
+        run: |
+          echo "🔍 Verifying staging deployment..."
+          
+          # Wait for propagation
+          sleep 30
+          
+          # Test catalog endpoint
+          if curl -f https://cdn-staging.logobox.com/catalog.json > /dev/null 2>&1; then
+            echo "✅ Catalog accessible on staging CDN"
+          else
+            echo "❌ Catalog not accessible on staging CDN"
+            exit 1
+          fi
+          
+          # Test a sample logo
+          if curl -f https://cdn-staging.logobox.com/logos/github/logo.svg > /dev/null 2>&1; then
+            echo "✅ Sample logo accessible on staging CDN"
+          else
+            echo "❌ Sample logo not accessible on staging CDN"
+            exit 1
+          fi
+
+  deploy-production:
+    name: Deploy to Production CDN
+    runs-on: ubuntu-latest
+    needs: [process-assets, deploy-staging]
+    if: |
+      github.event_name == 'workflow_dispatch' && 
+      inputs.environment == 'production' && 
+      inputs.deploy_to_cdn == true &&
+      needs.process-assets.outputs.catalog-updated == 'true'
+    environment:
+      name: production
+      url: https://cdn.logobox.com
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      
+      - name: Download processed assets
+        uses: actions/download-artifact@v4
+        with:
+          name: processed-assets-${{ github.run_id }}
+          path: logobox/
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Deploy to production CDN
+        run: |
+          cd logobox
+          npm install --production=false
+          
+          node scripts/deployToCDN.js \
+            --bucket ${{ secrets.PRODUCTION_CDN_BUCKET }} \
+            --distribution-id ${{ secrets.PRODUCTION_DISTRIBUTION_ID }} \
+            --region ${{ env.AWS_REGION }}
+      
+      - name: Verify production deployment
+        run: |
+          echo "🔍 Verifying production deployment..."
+          
+          # Wait for propagation
+          sleep 60
+          
+          # Test catalog endpoint
+          if curl -f https://cdn.logobox.com/catalog.json > /dev/null 2>&1; then
+            echo "✅ Catalog accessible on production CDN"
+          else
+            echo "❌ Catalog not accessible on production CDN"
+            exit 1
+          fi
+          
+          # Test multiple sample logos
+          SAMPLE_LOGOS=("github" "microsoft")
+          for logo in "${SAMPLE_LOGOS[@]}"; do
+            if curl -f "https://cdn.logobox.com/logos/$logo/logo.svg" > /dev/null 2>&1; then
+              echo "✅ $logo logo accessible on production CDN"
+            else
+              echo "❌ $logo logo not accessible on production CDN"
+              exit 1
+            fi
+          done
+      
+      - name: Notify deployment success
+        if: success()
+        run: |
+          echo "🎉 Production deployment successful!"
+          echo "CDN URL: https://cdn.logobox.com"
+          echo "Catalog: https://cdn.logobox.com/catalog.json"
+          echo "Processing Summary: ${{ needs.process-assets.outputs.processing-summary }}"
+
+  notify:
+    name: Send Notifications
+    runs-on: ubuntu-latest
+    needs: [validate-assets, process-assets, deploy-staging, deploy-production]
+    if: always()
+    
+    steps:
+      - name: Determine workflow status
+        id: status
+        run: |
+          if [[ "${{ needs.validate-assets.result }}" == "failure" ]]; then
+            echo "status=❌ Validation Failed" >> $GITHUB_OUTPUT
+            echo "color=danger" >> $GITHUB_OUTPUT
+          elif [[ "${{ needs.process-assets.result }}" == "failure" ]]; then
+            echo "status=❌ Processing Failed" >> $GITHUB_OUTPUT
+            echo "color=danger" >> $GITHUB_OUTPUT
+          elif [[ "${{ needs.deploy-staging.result }}" == "failure" ]]; then
+            echo "status=❌ Staging Deployment Failed" >> $GITHUB_OUTPUT
+            echo "color=warning" >> $GITHUB_OUTPUT
+          elif [[ "${{ needs.deploy-production.result }}" == "failure" ]]; then
+            echo "status=❌ Production Deployment Failed" >> $GITHUB_OUTPUT
+            echo "color=danger" >> $GITHUB_OUTPUT
+          else
+            echo "status=✅ Pipeline Completed Successfully" >> $GITHUB_OUTPUT
+            echo "color=good" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Create summary comment
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const summary = `## Asset Processing Pipeline Results
+            
+            **Status:** ${{ steps.status.outputs.status }}
+            
+            ${{ needs.process-assets.outputs.processing-summary }}
+            
+            **Pipeline Steps:**
+            - Validation: ${{ needs.validate-assets.result }}
+            - Processing: ${{ needs.process-assets.result }}
+            - Staging Deploy: ${{ needs.deploy-staging.result }}
+            - Production Deploy: ${{ needs.deploy-production.result }}
+            
+            **Run Details:** [View workflow run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            `;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: summary
+            });

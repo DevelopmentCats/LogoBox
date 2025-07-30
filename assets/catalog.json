@@ -1,0 +1,155 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": "2025-07-28T19:35:07.894Z",
+  "logos": [
+    {
+      "name": "GitHub",
+      "slug": "github",
+      "categories": [
+        "development",
+        "version-control"
+      ],
+      "tags": [
+        "git",
+        "code",
+        "repository",
+        "open-source"
+      ],
+      "description": "GitHub is a web-based version control and collaboration platform for software developers.",
+      "license": "MIT",
+      "variants": {
+        "original": "logo.svg",
+        "white": "logo-white.svg",
+        "black": "logo-black.svg",
+        "optimized": "logo-optimized.svg"
+      },
+      "formats": {
+        "svg": "logo.svg"
+      },
+      "fileStats": {
+        "variants": {
+          "original": {
+            "filename": "logo.svg",
+            "size": 560,
+            "createdAt": "2025-07-28T00:39:34.178Z",
+            "updatedAt": "2025-07-28T00:51:50.555Z"
+          },
+          "white": {
+            "filename": "logo-white.svg",
+            "size": 555,
+            "createdAt": "2025-07-28T00:39:56.105Z",
+            "updatedAt": "2025-07-28T19:03:13.965Z"
+          },
+          "black": {
+            "filename": "logo-black.svg",
+            "size": 555,
+            "createdAt": "2025-07-28T00:39:56.113Z",
+            "updatedAt": "2025-07-28T19:03:13.973Z"
+          },
+          "optimized": {
+            "filename": "logo-optimized.svg",
+            "size": 560,
+            "createdAt": "2025-07-28T00:39:56.089Z",
+            "updatedAt": "2025-07-28T19:03:13.956Z"
+          }
+        },
+        "directory": "/home/chesher/Documents/Projects/LogoBox/logobox/assets/logos/github"
+      }
+    },
+    {
+      "name": "Microsoft",
+      "slug": "microsoft",
+      "categories": [
+        "technology",
+        "software"
+      ],
+      "tags": [
+        "windows",
+        "office",
+        "cloud",
+        "enterprise"
+      ],
+      "description": "Microsoft Corporation is a multinational technology company that develops computer software, consumer electronics, and personal computers.",
+      "license": "Fair Use",
+      "variants": {
+        "original": "logo.svg",
+        "white": "logo-white.svg",
+        "black": "logo-black.svg",
+        "optimized": "logo-optimized.svg"
+      },
+      "formats": {
+        "svg": "logo.svg"
+      },
+      "fileStats": {
+        "variants": {
+          "original": {
+            "filename": "logo.svg",
+            "size": 120,
+            "createdAt": "2025-07-28T00:39:44.941Z",
+            "updatedAt": "2025-07-28T00:51:50.581Z"
+          },
+          "white": {
+            "filename": "logo-white.svg",
+            "size": 115,
+            "createdAt": "2025-07-28T00:39:56.131Z",
+            "updatedAt": "2025-07-28T19:03:13.977Z"
+          },
+          "black": {
+            "filename": "logo-black.svg",
+            "size": 115,
+            "createdAt": "2025-07-28T00:39:56.134Z",
+            "updatedAt": "2025-07-28T19:03:13.979Z"
+          },
+          "optimized": {
+            "filename": "logo-optimized.svg",
+            "size": 120,
+            "createdAt": "2025-07-28T00:39:56.127Z",
+            "updatedAt": "2025-07-28T19:03:13.975Z"
+          }
+        },
+        "directory": "/home/chesher/Documents/Projects/LogoBox/logobox/assets/logos/microsoft"
+      }
+    }
+  ],
+  "categories": [
+    "development",
+    "software",
+    "technology",
+    "version-control"
+  ],
+  "tags": [
+    "cloud",
+    "code",
+    "enterprise",
+    "git",
+    "office",
+    "open-source",
+    "repository",
+    "windows"
+  ],
+  "statistics": {
+    "totalLogos": 2,
+    "totalCategories": 4,
+    "totalTags": 8,
+    "licenseDistribution": {
+      "MIT": 1,
+      "Fair Use": 1
+    },
+    "categoryDistribution": {
+      "development": 1,
+      "version-control": 1,
+      "technology": 1,
+      "software": 1
+    },
+    "tagDistribution": {
+      "git": 1,
+      "code": 1,
+      "repository": 1,
+      "open-source": 1,
+      "windows": 1,
+      "office": 1,
+      "cloud": 1,
+      "enterprise": 1
+    }
+  }
+}

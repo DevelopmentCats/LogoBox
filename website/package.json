@@ -1,0 +1,51 @@
+{
+  "name": "logobox-website",
+  "version": "1.0.0",
+  "description": "LogoBox website - Vue.js application for browsing logos",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/DevelopmentCats/LogoBox.git",
+    "directory": "logobox/website"
+  },
+  "bugs": {
+    "url": "https://github.com/DevelopmentCats/LogoBox/issues"
+  },
+  "homepage": "https://github.com/DevelopmentCats/LogoBox#readme",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:analyze": "vite build --mode analyze",
+    "build:production": "NODE_ENV=production vite build",
+    "prerender": "node scripts/prerender.js",
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:unit": "vitest run src",
+    "test:performance": "vitest run src/tests/performance",
+    "test:deployment": "vitest run --config vitest.deployment.config.js",
+    "lint": "eslint . --ext .vue,.js,.ts --ignore-path .gitignore",
+    "format": "prettier --write src/",
+    "bundle-analyzer": "npx vite-bundle-analyzer dist",
+    "deploy": "node scripts/deploy.js",
+    "deploy:dry-run": "node scripts/deploy.js --dry-run",
+    "deploy:staging": "node scripts/deploy.js --bucket $STAGING_WEBSITE_BUCKET --distribution-id $STAGING_DISTRIBUTION_ID",
+    "deploy:production": "node scripts/deploy.js --bucket $PRODUCTION_WEBSITE_BUCKET --distribution-id $PRODUCTION_DISTRIBUTION_ID",
+    "deploy:skip-build": "node scripts/deploy.js --skip-build",
+    "deploy:full": "npm run build:production && npm run prerender && npm run deploy"
+  },
+  "dependencies": {
+    "pinia": "^2.1.0",
+    "vue": "^3.3.0",
+    "vue-router": "^4.2.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^4.4.0",
+    "@vue/test-utils": "^2.4.6",
+    "jsdom": "^23.2.0",
+    "lightningcss": "^1.30.1",
+    "terser": "^5.43.1",
+    "vite": "^5.0.0",
+    "vite-bundle-analyzer": "^0.7.0",
+    "vitest": "^1.6.1"
+  }
+}

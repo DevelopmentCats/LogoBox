@@ -1,0 +1,17 @@
+{
+  "name": "GitHub",
+  "slug": "github",
+  "categories": ["development", "version-control"],
+  "tags": ["git", "code", "repository", "open-source"],
+  "description": "GitHub is a web-based version control and collaboration platform for software developers.",
+  "license": "MIT",
+  "variants": {
+    "original": "logo.svg",
+    "white": "logo-white.svg",
+    "black": "logo-black.svg",
+    "optimized": "logo-optimized.svg"
+  },
+  "formats": {
+    "svg": "logo.svg"
+  }
+}

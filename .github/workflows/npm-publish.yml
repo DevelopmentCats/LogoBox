@@ -1,0 +1,443 @@
+name: NPM Package Publishing
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'logobox/package/**'
+      - 'logobox/assets/**'
+      - 'logobox/catalog/**'
+  workflow_run:
+    workflows: ["Asset Processing Pipeline", "Deploy to Cloudflare Pages"]
+    types:
+      - completed
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version bump type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+          - prerelease
+      dry_run:
+        description: 'Dry run (build and test without publishing)'
+        required: false
+        default: false
+        type: boolean
+      force_publish:
+        description: 'Force publish even if version unchanged'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  NODE_VERSION: '18'
+  PACKAGE_DIR: 'logobox/package'
+
+jobs:
+  version-check:
+    name: Check Version Changes
+    runs-on: ubuntu-latest
+    outputs:
+      should_publish: ${{ steps.version-check.outputs.should_publish }}
+      current_version: ${{ steps.version-check.outputs.current_version }}
+      npm_version: ${{ steps.version-check.outputs.npm_version }}
+      version_changed: ${{ steps.version-check.outputs.version_changed }}
+      version_type: ${{ steps.version-type.outputs.version_type }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Check version changes
+        id: version-check
+        run: |
+          cd ${{ env.PACKAGE_DIR }}
+          
+          # Get current version from package.json
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          echo "current_version=${CURRENT_VERSION}" >> $GITHUB_OUTPUT
+          echo "Current package.json version: ${CURRENT_VERSION}"
+          
+          # Get published version from NPM (handle case where package doesn't exist yet)
+          NPM_VERSION=$(npm view logobox version 2>/dev/null || echo "0.0.0")
+          echo "npm_version=${NPM_VERSION}" >> $GITHUB_OUTPUT
+          echo "Published NPM version: ${NPM_VERSION}"
+          
+          # Compare versions
+          if [ "${CURRENT_VERSION}" != "${NPM_VERSION}" ]; then
+            echo "version_changed=true" >> $GITHUB_OUTPUT
+            echo "✅ Version changed: ${NPM_VERSION} → ${CURRENT_VERSION}"
+          else
+            echo "version_changed=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ Version unchanged: ${CURRENT_VERSION}"
+          fi
+          
+          # Determine if we should publish
+          SHOULD_PUBLISH="false"
+          
+          if [ "${{ github.event.inputs.force_publish }}" = "true" ]; then
+            SHOULD_PUBLISH="true"
+            echo "🔄 Force publish enabled"
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            SHOULD_PUBLISH="true"
+            echo "🔄 Manual trigger"
+          elif [ "${{ github.event_name }}" = "workflow_run" ]; then
+            if [ "${{ github.event.workflow_run.conclusion }}" = "success" ] && [ "${CURRENT_VERSION}" != "${NPM_VERSION}" ]; then
+              SHOULD_PUBLISH="true"
+              echo "🔄 Workflow trigger with version change"
+            else
+              echo "⏭️ Workflow trigger but no version change or failed workflow"
+            fi
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            if [ "${CURRENT_VERSION}" != "${NPM_VERSION}" ]; then
+              SHOULD_PUBLISH="true"
+              echo "🔄 Push trigger with version change"
+            else
+              echo "⏭️ Push trigger but no version change"
+            fi
+          fi
+          
+          echo "should_publish=${SHOULD_PUBLISH}" >> $GITHUB_OUTPUT
+          echo "Final decision: should_publish=${SHOULD_PUBLISH}"
+
+      - name: Determine version type
+        id: version-type
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version_type=${{ github.event.inputs.version_type }}" >> $GITHUB_OUTPUT
+          else
+            # For automated runs, determine version type based on changes
+            cd ${{ env.PACKAGE_DIR }}
+            
+            # Check for breaking changes in commit messages
+            if git log --oneline HEAD~1..HEAD | grep -i "BREAKING\|breaking change" > /dev/null; then
+              echo "version_type=major" >> $GITHUB_OUTPUT
+              echo "🔥 Breaking changes detected, using major version bump"
+            elif git log --oneline HEAD~1..HEAD | grep -i "feat\|feature" > /dev/null; then
+              echo "version_type=minor" >> $GITHUB_OUTPUT
+              echo "✨ Features detected, using minor version bump"
+            else
+              echo "version_type=patch" >> $GITHUB_OUTPUT
+              echo "🐛 Using patch version bump"
+            fi
+          fi
+
+  build-and-test:
+    name: Build and Test Package
+    runs-on: ubuntu-latest
+    needs: version-check
+    if: needs.version-check.outputs.should_publish == 'true'
+    defaults:
+      run:
+        working-directory: logobox/package
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ${{ env.PACKAGE_DIR }}/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Lint code
+        run: npm run lint
+
+      - name: Format check
+        run: npm run format:check
+
+      - name: Run unit tests
+        run: npm run test:unit
+
+      - name: Run integration tests
+        run: npm run test:integration
+
+      - name: Build package
+        run: npm run build
+
+      - name: Test package publication readiness
+        run: |
+          # Pack the package locally
+          npm pack
+          
+          # Create test directory and install the package
+          mkdir -p /tmp/package-test
+          cd /tmp/package-test
+          npm init -y
+          npm install ${{ github.workspace }}/logobox/package/logobox-*.tgz
+          
+          # Test basic import
+          node -e "
+            const logobox = require('logobox');
+            console.log('✅ CJS import successful:', typeof logobox.LogoBoxAPI);
+          "
+          
+          # Test ES module import
+          node -e "
+            import('logobox').then(logobox => {
+              console.log('✅ ESM import successful:', typeof logobox.LogoBoxAPI);
+            });
+          "
+          
+          # Test TypeScript definitions
+          if [ -f "${{ github.workspace }}/logobox/package/dist/index.d.ts" ]; then
+            echo "✅ TypeScript definitions found"
+          else
+            echo "❌ TypeScript definitions missing"
+            exit 1
+          fi
+          
+          # Validate package.json fields
+          cd ${{ github.workspace }}/logobox/package
+          node -e "
+            const pkg = require('./package.json');
+            const required = ['name', 'version', 'description', 'main', 'module', 'types', 'repository', 'bugs', 'homepage'];
+            const missing = required.filter(field => !pkg[field]);
+            if (missing.length > 0) {
+              console.error('❌ Missing required package.json fields:', missing);
+              process.exit(1);
+            }
+            console.log('✅ All required package.json fields present');
+          "
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-dist
+          path: ${{ env.PACKAGE_DIR }}/dist/
+          retention-days: 7
+
+  publish-to-npm:
+    name: Publish to NPM
+    runs-on: ubuntu-latest
+    needs: [version-check, build-and-test]
+    if: needs.version-check.outputs.should_publish == 'true' && github.event.inputs.dry_run != 'true'
+    environment: npm-production
+    defaults:
+      run:
+        working-directory: logobox/package
+    
+    outputs:
+      published_version: ${{ steps.publish.outputs.published_version }}
+      package_url: ${{ steps.publish.outputs.package_url }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'npm'
+          cache-dependency-path: ${{ env.PACKAGE_DIR }}/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Configure Git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+      - name: Validate version and prepare for publishing
+        id: prepare
+        run: |
+          CURRENT_VERSION="${{ needs.version-check.outputs.current_version }}"
+          NPM_VERSION="${{ needs.version-check.outputs.npm_version }}"
+          
+          # If manual dispatch and version hasn't been bumped, do it now
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${CURRENT_VERSION}" = "${NPM_VERSION}" ]; then
+            echo "🔄 Bumping version for manual dispatch..."
+            NEW_VERSION=$(npm version ${{ needs.version-check.outputs.version_type }} --no-git-tag-version)
+            echo "NEW_VERSION=${NEW_VERSION}" >> $GITHUB_ENV
+            echo "Bumped version to: ${NEW_VERSION}"
+          else
+            echo "NEW_VERSION=${CURRENT_VERSION}" >> $GITHUB_ENV
+            echo "Using existing version: ${CURRENT_VERSION}"
+          fi
+
+      - name: Update changelog
+        run: |
+          # Create or update CHANGELOG.md
+          if [ ! -f CHANGELOG.md ]; then
+            echo "# Changelog" > CHANGELOG.md
+            echo "" >> CHANGELOG.md
+          fi
+          
+          # Get current date
+          CURRENT_DATE=$(date +"%Y-%m-%d")
+          
+          # Prepare changelog entry
+          TEMP_FILE=$(mktemp)
+          echo "# Changelog" > $TEMP_FILE
+          echo "" >> $TEMP_FILE
+          echo "## [$NEW_VERSION] - $CURRENT_DATE" >> $TEMP_FILE
+          
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            echo "- Updated logo catalog with latest assets" >> $TEMP_FILE
+          else
+            echo "- Package improvements and updates" >> $TEMP_FILE
+          fi
+          
+          echo "" >> $TEMP_FILE
+          
+          # Append existing changelog (skip first two lines)
+          tail -n +3 CHANGELOG.md >> $TEMP_FILE
+          mv $TEMP_FILE CHANGELOG.md
+
+      - name: Build package
+        run: npm run build
+
+      - name: Publish to NPM
+        id: publish
+        run: |
+          echo "🚀 Publishing version $NEW_VERSION to NPM..."
+          
+          # Publish with detailed output
+          npm publish --access public --verbose
+          
+          # Set outputs
+          echo "published_version=${NEW_VERSION}" >> $GITHUB_OUTPUT
+          echo "package_url=https://www.npmjs.com/package/logobox/v/${NEW_VERSION}" >> $GITHUB_OUTPUT
+          
+          echo "✅ Successfully published logobox@${NEW_VERSION}"
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Verify publication
+        run: |
+          echo "🔍 Verifying publication..."
+          
+          # Wait a moment for NPM to propagate
+          sleep 10
+          
+          # Check if the version is available
+          PUBLISHED_VERSION=$(npm view logobox@$NEW_VERSION version 2>/dev/null || echo "")
+          
+          if [ "$PUBLISHED_VERSION" = "$NEW_VERSION" ]; then
+            echo "✅ Publication verified: logobox@$NEW_VERSION is available on NPM"
+          else
+            echo "❌ Publication verification failed"
+            exit 1
+          fi
+
+      - name: Commit version bump
+        run: |
+          git add package.json package-lock.json CHANGELOG.md
+          git commit -m "chore(package): bump version to $NEW_VERSION"
+          git push
+
+      - name: Create GitHub release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: "package-${{ env.NEW_VERSION }}"
+          release_name: "LogoBox NPM Package ${{ env.NEW_VERSION }}"
+          body: |
+            🚀 **LogoBox NPM Package ${{ env.NEW_VERSION }}**
+            
+            This release includes the latest logo catalog updates and package improvements.
+            
+            ### Installation
+            ```bash
+            npm install logobox@${{ env.NEW_VERSION }}
+            ```
+            
+            ### Package Information
+            - **NPM Package**: [logobox@${{ env.NEW_VERSION }}](https://www.npmjs.com/package/logobox/v/${{ env.NEW_VERSION }})
+            - **Repository**: [DevelopmentCats/LogoBox](https://github.com/DevelopmentCats/LogoBox)
+            - **Documentation**: [Package README](https://github.com/DevelopmentCats/LogoBox/blob/main/logobox/package/README.md)
+            
+            ### Changes
+            - Updated logo catalog with latest assets
+            - Package improvements and bug fixes
+            - Enhanced TypeScript support and definitions
+            
+            See [CHANGELOG.md](https://github.com/DevelopmentCats/LogoBox/blob/main/logobox/package/CHANGELOG.md) for detailed changes.
+            
+            ### Verification
+            This package has been automatically tested and verified before publication.
+          draft: false
+          prerelease: ${{ contains(env.NEW_VERSION, 'alpha') || contains(env.NEW_VERSION, 'beta') || contains(env.NEW_VERSION, 'rc') }}
+
+  notify-completion:
+    name: Notify Completion
+    runs-on: ubuntu-latest
+    needs: [version-check, build-and-test, publish-to-npm]
+    if: always()
+    
+    steps:
+      - name: Create workflow summary
+        run: |
+          echo "## NPM Package Publishing Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ needs.version-check.outputs.should_publish }}" = "false" ]; then
+            echo "**Status:** ⏭️ Skipped - No publication needed" >> $GITHUB_STEP_SUMMARY
+            echo "**Reason:** No version changes detected" >> $GITHUB_STEP_SUMMARY
+            echo "**Current Version:** ${{ needs.version-check.outputs.current_version }}" >> $GITHUB_STEP_SUMMARY
+            echo "**NPM Version:** ${{ needs.version-check.outputs.npm_version }}" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            echo "**Status:** ✅ Dry Run Completed" >> $GITHUB_STEP_SUMMARY
+            echo "**Result:** Package built and tested successfully" >> $GITHUB_STEP_SUMMARY
+            echo "**Version:** ${{ needs.version-check.outputs.current_version }}" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ needs.publish-to-npm.result }}" = "success" ]; then
+            echo "**Status:** 🚀 Published Successfully" >> $GITHUB_STEP_SUMMARY
+            echo "**Version:** ${{ needs.publish-to-npm.outputs.published_version }}" >> $GITHUB_STEP_SUMMARY
+            echo "**NPM Package:** [logobox@${{ needs.publish-to-npm.outputs.published_version }}](${{ needs.publish-to-npm.outputs.package_url }})" >> $GITHUB_STEP_SUMMARY
+            echo "**GitHub Release:** [package-${{ needs.publish-to-npm.outputs.published_version }}](https://github.com/${{ github.repository }}/releases/tag/package-${{ needs.publish-to-npm.outputs.published_version }})" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "**Status:** ❌ Publication Failed" >> $GITHUB_STEP_SUMMARY
+            echo "**Build Status:** ${{ needs.build-and-test.result }}" >> $GITHUB_STEP_SUMMARY
+            echo "**Publish Status:** ${{ needs.publish-to-npm.result }}" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Trigger:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Workflow Run:** [View Details](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+
+      - name: Final notification
+        run: |
+          if [ "${{ needs.version-check.outputs.should_publish }}" = "false" ]; then
+            echo "✅ No publication needed - no version changes detected"
+            echo "Current version: ${{ needs.version-check.outputs.current_version }}"
+            echo "NPM version: ${{ needs.version-check.outputs.npm_version }}"
+          elif [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            echo "✅ Dry run completed successfully - package built and tested"
+            echo "Version: ${{ needs.version-check.outputs.current_version }}"
+          elif [ "${{ needs.publish-to-npm.result }}" = "success" ]; then
+            echo "🚀 NPM package published successfully!"
+            echo "Published version: ${{ needs.publish-to-npm.outputs.published_version }}"
+            echo "NPM URL: ${{ needs.publish-to-npm.outputs.package_url }}"
+          else
+            echo "❌ NPM package publication failed"
+            echo "Build result: ${{ needs.build-and-test.result }}"
+            echo "Publish result: ${{ needs.publish-to-npm.result }}"
+            exit 1
+          fi

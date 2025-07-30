@@ -1,0 +1,98 @@
+name = "logobox"
+compatibility_date = "2024-01-01"
+
+# Build configuration
+[build]
+command = "npm run build --workspace=website"
+cwd = "logobox"
+publish = "logobox/website/dist"
+
+# Node.js version compatible with Cloudflare Pages (Requirement 5.1)
+[build.environment]
+NODE_VERSION = "18"
+
+[env.production]
+name = "logobox"
+# Custom domain routes (uncomment when domain is configured)
+# routes = [
+#   { pattern = "logobox.dev", zone_name = "logobox.dev" },
+#   { pattern = "www.logobox.dev", zone_name = "logobox.dev" }
+# ]
+
+[env.preview]
+name = "logobox-preview"
+
+# Compression rules for text-based assets (Requirement 5.3 - bundle optimization)
+[[env.production.rules]]
+type = "Text"
+globs = ["**/*.html"]
+[env.production.rules.result]
+compress = true
+
+[[env.production.rules]]
+type = "Text"
+globs = ["**/*.js", "**/*.css", "**/*.mjs"]
+[env.production.rules.result]
+compress = true
+
+[[env.production.rules]]
+type = "Text"
+globs = ["**/*.json", "**/*.xml", "**/*.txt", "**/*.svg"]
+[env.production.rules.result]
+compress = true
+
+# Long-term caching for immutable assets (Requirement 5.4 - asset delivery)
+[[env.production.rules]]
+type = "Text"
+globs = ["assets/**/*"]
+[env.production.rules.result]
+cache_control = "public, max-age=31536000, immutable"
+
+# Logo assets caching with shorter duration for updates (Requirement 5.2 - logo optimization)
+[[env.production.rules]]
+type = "Text"
+globs = ["logos/**/*", "**/*.svg", "**/*.png", "**/*.jpg", "**/*.jpeg", "**/*.gif", "**/*.webp", "**/*.ico"]
+[env.production.rules.result]
+cache_control = "public, max-age=86400"
+
+# Catalog caching for dynamic content (Requirement 5.2 - catalog generation)
+[[env.production.rules]]
+type = "Text"
+globs = ["catalog.json", "**/catalog.json"]
+[env.production.rules.result]
+cache_control = "public, max-age=3600"
+
+# Font caching
+[[env.production.rules]]
+type = "Text"
+globs = ["**/*.woff", "**/*.woff2", "**/*.ttf", "**/*.otf", "**/*.eot"]
+[env.production.rules.result]
+cache_control = "public, max-age=31536000, immutable"
+
+# Security headers for HTML files
+[[env.production.rules]]
+type = "Text"
+globs = ["**/*.html"]
+[env.production.rules.result.headers]
+"X-Frame-Options" = "DENY"
+"X-Content-Type-Options" = "nosniff"
+"Referrer-Policy" = "strict-origin-when-cross-origin"
+"Permissions-Policy" = "camera=(), microphone=(), geolocation=()"
+"Content-Security-Policy" = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' https:;"
+
+# Performance headers
+[[env.production.rules]]
+type = "Text"
+globs = ["**/*"]
+[env.production.rules.result.headers]
+"X-DNS-Prefetch-Control" = "on"
+"X-XSS-Protection" = "1; mode=block"
+
+# CORS headers for API endpoints
+[[env.production.rules]]
+type = "Text"
+globs = ["/api/**/*", "**/*.json"]
+[env.production.rules.result.headers]
+"Access-Control-Allow-Origin" = "*"
+"Access-Control-Allow-Methods" = "GET, POST, OPTIONS"
+"Access-Control-Allow-Headers" = "Content-Type, Authorization"

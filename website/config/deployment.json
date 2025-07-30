@@ -1,0 +1,101 @@
+{
+  "environments": {
+    "staging": {
+      "name": "staging",
+      "domain": "staging.logobox.com",
+      "s3Bucket": "${STAGING_WEBSITE_BUCKET}",
+      "cloudFrontDistributionId": "${STAGING_DISTRIBUTION_ID}",
+      "region": "us-east-1",
+      "caching": {
+        "htmlCacheControl": "public, max-age=0, s-maxage=300, must-revalidate",
+        "assetCacheControl": "public, max-age=86400, immutable",
+        "jsonCacheControl": "public, max-age=300, s-maxage=60"
+      },
+      "features": {
+        "analytics": false,
+        "performanceMonitoring": true,
+        "errorReporting": true,
+        "debugMode": false
+      },
+      "security": {
+        "contentSecurityPolicy": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://cdn.logobox.com; connect-src 'self' https://api.logobox.com https://cdn.logobox.com;",
+        "strictTransportSecurity": "max-age=63072000; includeSubDomains; preload",
+        "xFrameOptions": "DENY",
+        "xContentTypeOptions": "nosniff"
+      }
+    },
+    "production": {
+      "name": "production",
+      "domain": "logobox.com",
+      "s3Bucket": "${PRODUCTION_WEBSITE_BUCKET}",
+      "cloudFrontDistributionId": "${PRODUCTION_DISTRIBUTION_ID}",
+      "region": "us-east-1",
+      "caching": {
+        "htmlCacheControl": "public, max-age=0, s-maxage=31536000, must-revalidate",
+        "assetCacheControl": "public, max-age=31536000, immutable",
+        "jsonCacheControl": "public, max-age=3600, s-maxage=1800"
+      },
+      "features": {
+        "analytics": true,
+        "performanceMonitoring": false,
+        "errorReporting": true,
+        "debugMode": false
+      },
+      "security": {
+        "contentSecurityPolicy": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://cdn.logobox.com; connect-src 'self' https://api.logobox.com https://cdn.logobox.com;",
+        "strictTransportSecurity": "max-age=63072000; includeSubDomains; preload",
+        "xFrameOptions": "DENY",
+        "xContentTypeOptions": "nosniff"
+      }
+    }
+  },
+  "build": {
+    "target": "es2020",
+    "sourcemap": false,
+    "minify": true,
+    "cssCodeSplit": true,
+    "chunkSizeWarningLimit": 500,
+    "assetsInlineLimit": 4096
+  },
+  "optimization": {
+    "prerender": {
+      "enabled": true,
+      "routes": [
+        "/",
+        "/search",
+        "/categories",
+        "/404"
+      ]
+    },
+    "compression": {
+      "enabled": true,
+      "algorithm": "gzip",
+      "threshold": 1024
+    },
+    "bundleAnalysis": {
+      "enabled": false,
+      "outputPath": "dist/bundle-analysis.html"
+    }
+  },
+  "monitoring": {
+    "healthCheck": {
+      "enabled": true,
+      "endpoints": [
+        "/",
+        "/404.html",
+        "/sitemap.xml",
+        "/robots.txt"
+      ],
+      "timeout": 10000,
+      "retries": 3
+    },
+    "performance": {
+      "enabled": true,
+      "budgets": {
+        "initial": 250000,
+        "anyComponentStyle": 150000,
+        "anyScript": 150000
+      }
+    }
+  }
+}

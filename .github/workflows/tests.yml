@@ -1,0 +1,661 @@
+name: Test Automation
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'logobox/**'
+      - '.github/workflows/tests.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'logobox/**'
+      - '.github/workflows/tests.yml'
+  workflow_dispatch:
+    inputs:
+      test_type:
+        description: 'Type of tests to run'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - unit
+          - integration
+          - build
+          - performance
+      coverage_threshold:
+        description: 'Coverage threshold percentage'
+        required: false
+        default: '80'
+        type: string
+      fail_fast:
+        description: 'Fail fast on first error'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  NODE_VERSION: '18'
+  COVERAGE_THRESHOLD: ${{ inputs.coverage_threshold || '80' }}
+
+jobs:
+  setup:
+    name: Setup Test Environment
+    runs-on: ubuntu-latest
+    outputs:
+      cache-key: ${{ steps.cache-key.outputs.key }}
+      test-matrix: ${{ steps.test-matrix.outputs.matrix }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Generate cache key
+        id: cache-key
+        run: |
+          HASH=$(find logobox -name "package*.json" -exec sha256sum {} \; | sha256sum | cut -d' ' -f1)
+          echo "key=node-modules-${{ env.NODE_VERSION }}-${HASH}" >> $GITHUB_OUTPUT
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: logobox/package-lock.json
+      
+      - name: Cache node modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            logobox/node_modules
+            logobox/website/node_modules
+            logobox/package/node_modules
+          key: ${{ steps.cache-key.outputs.key }}
+          restore-keys: |
+            node-modules-${{ env.NODE_VERSION }}-
+      
+      - name: Install dependencies
+        run: |
+          cd logobox
+          npm ci
+      
+      - name: Generate test matrix
+        id: test-matrix
+        run: |
+          if [[ "${{ inputs.test_type }}" == "unit" ]]; then
+            MATRIX='["unit"]'
+          elif [[ "${{ inputs.test_type }}" == "integration" ]]; then
+            MATRIX='["integration"]'
+          elif [[ "${{ inputs.test_type }}" == "build" ]]; then
+            MATRIX='["build"]'
+          elif [[ "${{ inputs.test_type }}" == "performance" ]]; then
+            MATRIX='["performance"]'
+          else
+            MATRIX='["unit", "integration", "build", "performance"]'
+          fi
+          echo "matrix=${MATRIX}" >> $GITHUB_OUTPUT
+
+  lint-and-format:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+    needs: [setup]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: logobox/package-lock.json
+      
+      - name: Restore node modules cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            logobox/node_modules
+            logobox/website/node_modules
+            logobox/package/node_modules
+          key: ${{ needs.setup.outputs.cache-key }}
+      
+      - name: Run ESLint
+        run: |
+          cd logobox
+          npm run lint -- --format=json --output-file=eslint-report.json || true
+          npm run lint
+      
+      - name: Check code formatting
+        run: |
+          cd logobox
+          npm run format -- --check
+      
+      - name: TypeScript type checking
+        run: |
+          cd logobox/package
+          npm run typecheck
+      
+      - name: Upload lint results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-results-${{ github.run_id }}
+          path: logobox/eslint-report.json
+          retention-days: 7
+
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    needs: [setup]
+    if: contains(fromJson(needs.setup.outputs.test-matrix), 'unit')
+    strategy:
+      fail-fast: ${{ inputs.fail_fast || false }}
+      matrix:
+        workspace: [root, website, package]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: logobox/package-lock.json
+      
+      - name: Restore node modules cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            logobox/node_modules
+            logobox/website/node_modules
+            logobox/package/node_modules
+          key: ${{ needs.setup.outputs.cache-key }}
+      
+      - name: Run unit tests (Root)
+        if: matrix.workspace == 'root'
+        run: |
+          cd logobox
+          npm run test:unit -- --run --reporter=verbose --reporter=json --outputFile=unit-test-results.json
+        env:
+          VITEST_MIN_THREADS: 1
+          VITEST_MAX_THREADS: 4
+      
+      - name: Run unit tests (Website)
+        if: matrix.workspace == 'website'
+        run: |
+          cd logobox/website
+          npm run test:unit -- --run --reporter=verbose --reporter=json --outputFile=unit-test-results.json
+        env:
+          VITEST_MIN_THREADS: 1
+          VITEST_MAX_THREADS: 4
+      
+      - name: Run unit tests (Package)
+        if: matrix.workspace == 'package'
+        run: |
+          cd logobox/package
+          npm run test:unit -- --run --reporter=verbose --reporter=json --outputFile=unit-test-results.json
+        env:
+          VITEST_MIN_THREADS: 1
+          VITEST_MAX_THREADS: 4
+      
+      - name: Generate coverage report
+        if: matrix.workspace == 'package'
+        run: |
+          cd logobox/package
+          npm run test:coverage -- --run
+      
+      - name: Check coverage threshold
+        if: matrix.workspace == 'package'
+        run: |
+          cd logobox/package
+          COVERAGE=$(node -e "
+            const fs = require('fs');
+            try {
+              const coverage = JSON.parse(fs.readFileSync('coverage/coverage-summary.json', 'utf8'));
+              const total = coverage.total;
+              const lines = total.lines.pct;
+              const statements = total.statements.pct;
+              const functions = total.functions.pct;
+              const branches = total.branches.pct;
+              const average = (lines + statements + functions + branches) / 4;
+              console.log(Math.round(average));
+            } catch (e) {
+              console.log('0');
+            }
+          ")
+          
+          echo "Coverage: ${COVERAGE}%"
+          echo "Threshold: ${{ env.COVERAGE_THRESHOLD }}%"
+          
+          if (( COVERAGE < ${{ env.COVERAGE_THRESHOLD }} )); then
+            echo "❌ Coverage ${COVERAGE}% is below threshold ${{ env.COVERAGE_THRESHOLD }}%"
+            exit 1
+          else
+            echo "✅ Coverage ${COVERAGE}% meets threshold ${{ env.COVERAGE_THRESHOLD }}%"
+          fi
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-results-${{ matrix.workspace }}-${{ github.run_id }}
+          path: |
+            logobox/**/unit-test-results.json
+            logobox/**/coverage/
+          retention-days: 7
+
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: [setup]
+    if: contains(fromJson(needs.setup.outputs.test-matrix), 'integration')
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: logobox/package-lock.json
+      
+      - name: Restore node modules cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            logobox/node_modules
+            logobox/website/node_modules
+            logobox/package/node_modules
+          key: ${{ needs.setup.outputs.cache-key }}
+      
+      - name: Run environment check
+        run: |
+          cd logobox
+          npm run env-check
+      
+      - name: Validate metadata
+        run: |
+          cd logobox
+          npm run validate-metadata
+      
+      - name: Run integration tests (Root)
+        run: |
+          cd logobox
+          npm run test:integration -- --run --reporter=verbose --reporter=json --outputFile=integration-test-results.json
+        env:
+          VITEST_MIN_THREADS: 1
+          VITEST_MAX_THREADS: 2
+      
+      - name: Run integration tests (Package)
+        run: |
+          cd logobox/package
+          npm run test:integration -- --run --reporter=verbose --reporter=json --outputFile=integration-test-results.json
+        env:
+          VITEST_MIN_THREADS: 1
+          VITEST_MAX_THREADS: 2
+      
+      - name: Test package publication (dry run)
+        run: |
+          cd logobox/package
+          npm run test:publication
+      
+      - name: Upload integration test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-results-${{ github.run_id }}
+          path: |
+            logobox/**/integration-test-results.json
+          retention-days: 7
+
+  build-verification:
+    name: Build Verification Tests
+    runs-on: ubuntu-latest
+    needs: [setup]
+    if: contains(fromJson(needs.setup.outputs.test-matrix), 'build')
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: logobox/package-lock.json
+      
+      - name: Restore node modules cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            logobox/node_modules
+            logobox/website/node_modules
+            logobox/package/node_modules
+          key: ${{ needs.setup.outputs.cache-key }}
+      
+      - name: Generate logo variants
+        run: |
+          cd logobox
+          npm run generate-variants
+      
+      - name: Optimize assets
+        run: |
+          cd logobox
+          npm run optimize-assets
+      
+      - name: Build catalog
+        run: |
+          cd logobox
+          npm run build-catalog
+      
+      - name: Verify catalog structure
+        run: |
+          cd logobox
+          if [[ ! -f "assets/catalog.json" ]]; then
+            echo "❌ Catalog file not generated"
+            exit 1
+          fi
+          
+          # Validate catalog JSON structure
+          node -e "
+            const fs = require('fs');
+            const catalog = JSON.parse(fs.readFileSync('assets/catalog.json', 'utf8'));
+            if (!catalog.logos || !Array.isArray(catalog.logos)) {
+              throw new Error('Invalid catalog structure');
+            }
+            console.log('✅ Catalog structure valid');
+            console.log('Logos count:', catalog.logos.length);
+          "
+      
+      - name: Build website
+        run: |
+          cd logobox
+          npm run build --workspace=website
+        env:
+          NODE_ENV: production
+          VITE_BUILD_TIME: ${{ github.run_id }}
+          VITE_COMMIT_SHA: ${{ github.sha }}
+      
+      - name: Verify website build
+        run: |
+          cd logobox/website
+          if [[ ! -d "dist" ]]; then
+            echo "❌ Website dist directory not created"
+            exit 1
+          fi
+          
+          if [[ ! -f "dist/index.html" ]]; then
+            echo "❌ Website index.html not generated"
+            exit 1
+          fi
+          
+          # Check for essential files
+          REQUIRED_FILES=("assets" "catalog.json")
+          for file in "${REQUIRED_FILES[@]}"; do
+            if [[ ! -e "dist/$file" ]]; then
+              echo "❌ Required file/directory missing: $file"
+              exit 1
+            fi
+          done
+          
+          echo "✅ Website build verification passed"
+      
+      - name: Build NPM package
+        run: |
+          cd logobox/package
+          npm run build
+      
+      - name: Verify package build
+        run: |
+          cd logobox/package
+          if [[ ! -d "dist" ]]; then
+            echo "❌ Package dist directory not created"
+            exit 1
+          fi
+          
+          # Check for essential package files
+          REQUIRED_FILES=("index.js" "index.cjs" "index.d.ts")
+          for file in "${REQUIRED_FILES[@]}"; do
+            if [[ ! -f "dist/$file" ]]; then
+              echo "❌ Required package file missing: $file"
+              exit 1
+            fi
+          done
+          
+          echo "✅ Package build verification passed"
+      
+      - name: Test package installation
+        run: |
+          cd logobox/package
+          npm pack
+          PACKAGE_FILE=$(ls *.tgz)
+          
+          # Create temporary directory and test installation
+          mkdir -p /tmp/package-test
+          cd /tmp/package-test
+          npm init -y
+          npm install $GITHUB_WORKSPACE/logobox/package/$PACKAGE_FILE
+          
+          # Test package import
+          node -e "
+            const logobox = require('logobox');
+            console.log('✅ Package import successful');
+            console.log('Available methods:', Object.keys(logobox));
+          "
+      
+      - name: Upload build artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts-${{ github.run_id }}
+          path: |
+            logobox/website/dist/
+            logobox/package/dist/
+            logobox/package/*.tgz
+          retention-days: 7
+
+  performance-tests:
+    name: Performance Tests
+    runs-on: ubuntu-latest
+    needs: [setup, build-verification]
+    if: contains(fromJson(needs.setup.outputs.test-matrix), 'performance') && !failure()
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: logobox/package-lock.json
+      
+      - name: Restore node modules cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            logobox/node_modules
+            logobox/website/node_modules
+            logobox/package/node_modules
+          key: ${{ needs.setup.outputs.cache-key }}
+      
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts-${{ github.run_id }}
+          path: build-artifacts/
+      
+      - name: Run website performance tests
+        run: |
+          cd logobox/website
+          npm run test:performance -- --run --reporter=verbose --reporter=json --outputFile=performance-test-results.json
+      
+      - name: Analyze bundle size
+        run: |
+          cd logobox/website
+          
+          # Copy build artifacts
+          cp -r ../../build-artifacts/dist ./
+          
+          # Analyze bundle size
+          npm run bundle-analyzer > bundle-analysis.txt 2>&1 || true
+          
+          # Check bundle size limits
+          BUNDLE_SIZE=$(du -sk dist | cut -f1)
+          MAX_SIZE=5120  # 5MB in KB
+          
+          echo "Bundle size: ${BUNDLE_SIZE}KB"
+          echo "Max allowed: ${MAX_SIZE}KB"
+          
+          if (( BUNDLE_SIZE > MAX_SIZE )); then
+            echo "❌ Bundle size ${BUNDLE_SIZE}KB exceeds limit ${MAX_SIZE}KB"
+            exit 1
+          else
+            echo "✅ Bundle size within limits"
+          fi
+      
+      - name: Upload performance results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-test-results-${{ github.run_id }}
+          path: |
+            logobox/website/performance-test-results.json
+            logobox/website/bundle-analysis.txt
+          retention-days: 7
+
+  test-summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: [lint-and-format, unit-tests, integration-tests, build-verification, performance-tests]
+    if: always()
+    
+    steps:
+      - name: Download all test artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: test-results/
+      
+      - name: Generate test summary
+        run: |
+          echo "# Test Automation Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Test Results Overview" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Job status summary
+          echo "| Test Type | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Code Quality | ${{ needs.lint-and-format.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Unit Tests | ${{ needs.unit-tests.result == 'success' && '✅ Passed' || needs.unit-tests.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Integration Tests | ${{ needs.integration-tests.result == 'success' && '✅ Passed' || needs.integration-tests.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build Verification | ${{ needs.build-verification.result == 'success' && '✅ Passed' || needs.build-verification.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Performance Tests | ${{ needs.performance-tests.result == 'success' && '✅ Passed' || needs.performance-tests.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Overall status
+          if [[ "${{ needs.lint-and-format.result }}" == "success" && 
+                ("${{ needs.unit-tests.result }}" == "success" || "${{ needs.unit-tests.result }}" == "skipped") &&
+                ("${{ needs.integration-tests.result }}" == "success" || "${{ needs.integration-tests.result }}" == "skipped") &&
+                ("${{ needs.build-verification.result }}" == "success" || "${{ needs.build-verification.result }}" == "skipped") &&
+                ("${{ needs.performance-tests.result }}" == "success" || "${{ needs.performance-tests.result }}" == "skipped") ]]; then
+            echo "## 🎉 All Tests Passed!" >> $GITHUB_STEP_SUMMARY
+            echo "The codebase is ready for deployment." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## ❌ Some Tests Failed" >> $GITHUB_STEP_SUMMARY
+            echo "Please review the failed tests and fix the issues before proceeding." >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Test Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "- **Node.js Version:** ${{ env.NODE_VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Coverage Threshold:** ${{ env.COVERAGE_THRESHOLD }}%" >> $GITHUB_STEP_SUMMARY
+          echo "- **Test Type:** ${{ inputs.test_type || 'all' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Fail Fast:** ${{ inputs.fail_fast || 'false' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Workflow Run:** [View Details](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+
+  notify-failure:
+    name: Notify Test Failures
+    runs-on: ubuntu-latest
+    needs: [lint-and-format, unit-tests, integration-tests, build-verification, performance-tests]
+    if: failure() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Create failure issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = `🚨 Test Automation Failure on Main Branch`;
+            const body = `
+            ## Test Failure Report
+            
+            **Workflow Run:** [${context.runId}](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})
+            **Commit:** ${context.sha}
+            **Branch:** ${context.ref}
+            **Triggered by:** ${context.actor}
+            
+            ### Failed Jobs:
+            ${'${{ needs.lint-and-format.result }}' === 'failure' ? '- ❌ Code Quality Checks' : ''}
+            ${'${{ needs.unit-tests.result }}' === 'failure' ? '- ❌ Unit Tests' : ''}
+            ${'${{ needs.integration-tests.result }}' === 'failure' ? '- ❌ Integration Tests' : ''}
+            ${'${{ needs.build-verification.result }}' === 'failure' ? '- ❌ Build Verification' : ''}
+            ${'${{ needs.performance-tests.result }}' === 'failure' ? '- ❌ Performance Tests' : ''}
+            
+            ### Next Steps:
+            1. Review the failed test logs in the workflow run
+            2. Fix the failing tests locally
+            3. Ensure all tests pass before pushing to main
+            4. Consider reverting the problematic commit if critical
+            
+            ### Test Configuration:
+            - Node.js Version: ${{ env.NODE_VERSION }}
+            - Coverage Threshold: ${{ env.COVERAGE_THRESHOLD }}%
+            
+            This issue was automatically created by the test automation workflow.
+            `;
+            
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: body,
+              labels: ['bug', 'tests', 'urgent', 'main-branch']
+            });
+      
+      - name: Send notification comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const comment = `
+            ## ❌ Test Automation Failed
+            
+            Some tests failed in this pull request. Please review and fix the issues:
+            
+            ### Failed Jobs:
+            ${'${{ needs.lint-and-format.result }}' === 'failure' ? '- ❌ Code Quality Checks' : ''}
+            ${'${{ needs.unit-tests.result }}' === 'failure' ? '- ❌ Unit Tests' : ''}
+            ${'${{ needs.integration-tests.result }}' === 'failure' ? '- ❌ Integration Tests' : ''}
+            ${'${{ needs.build-verification.result }}' === 'failure' ? '- ❌ Build Verification' : ''}
+            ${'${{ needs.performance-tests.result }}' === 'failure' ? '- ❌ Performance Tests' : ''}
+            
+            **Workflow Run:** [View Details](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            
+            Please fix the failing tests and push the changes to update this PR.
+            `;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });

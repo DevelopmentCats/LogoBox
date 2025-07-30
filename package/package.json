@@ -1,0 +1,110 @@
+{
+  "name": "logobox",
+  "version": "1.0.0",
+  "description": "LogoBox NPM package - Programmatic access to high-quality logos and icons with TypeScript support",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json",
+    "./dist/*": "./dist/*"
+  },
+  "files": [
+    "dist/**/*",
+    "data/**/*",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "node scripts/build.js",
+    "build:dev": "npm run clean && tsup src/index.ts --format cjs,esm --dts --watch",
+    "build:simple": "npm run clean && tsup src/index.ts --format cjs,esm --dts --clean",
+    "clean": "rimraf dist",
+    "dev": "npm run build:dev",
+    "test": "vitest",
+    "test:unit": "vitest run src",
+    "test:integration": "vitest run tests/integration",
+    "test:coverage": "vitest run --coverage",
+    "test:publication": "node scripts/test-publication.js",
+    "lint": "eslint . --ext .ts --ignore-path .gitignore",
+    "lint:fix": "eslint . --ext .ts --ignore-path .gitignore --fix",
+    "format": "prettier --write src/ tests/",
+    "format:check": "prettier --check src/ tests/",
+    "typecheck": "tsc --noEmit",
+    "publish:dry": "node scripts/publish.js --dry-run",
+    "publish:patch": "node scripts/publish.js patch",
+    "publish:minor": "node scripts/publish.js minor",
+    "publish:major": "node scripts/publish.js major",
+    "version:patch": "node scripts/version.js patch",
+    "version:minor": "node scripts/version.js minor",
+    "version:major": "node scripts/version.js major",
+    "version:prerelease": "node scripts/version.js prerelease",
+    "version:dry": "node scripts/version.js patch --dry-run",
+    "release:patch": "npm run version:patch && npm run publish:patch",
+    "release:minor": "npm run version:minor && npm run publish:minor",
+    "release:major": "npm run version:major && npm run publish:major",
+    "prepublishOnly": "npm run build && npm run test && npm run lint",
+    "prepack": "npm run build",
+    "postpack": "npm run clean"
+  },
+  "keywords": [
+    "logos",
+    "icons",
+    "svg",
+    "branding",
+    "assets",
+    "typescript",
+    "cdn",
+    "logo-library",
+    "brand-assets"
+  ],
+  "author": {
+    "name": "LogoBox Team",
+    "url": "https://github.com/DevelopmentCats/LogoBox"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/DevelopmentCats/LogoBox.git",
+    "directory": "logobox/package"
+  },
+  "bugs": {
+    "url": "https://github.com/DevelopmentCats/LogoBox/issues"
+  },
+  "homepage": "https://github.com/DevelopmentCats/LogoBox#readme",
+  "funding": {
+    "type": "github",
+    "url": "https://github.com/sponsors/DevelopmentCats"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "dependencies": {
+    "ajv": "^8.12.0",
+    "ajv-formats": "^2.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "@vitest/coverage-v8": "^1.0.0",
+    "eslint": "^8.0.0",
+    "prettier": "^3.0.0",
+    "rimraf": "^5.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0"
+  }
+}

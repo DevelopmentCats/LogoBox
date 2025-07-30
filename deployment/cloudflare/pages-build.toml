@@ -1,0 +1,88 @@
+# Cloudflare Pages build configuration
+# This file provides additional build settings for Cloudflare Pages deployment
+
+[build]
+# Build command for the website (Requirement 5.1 - Node.js compatibility)
+command = "npm run build --workspace=website"
+
+# Build output directory (Requirement 5.4 - asset delivery)
+publish = "logobox/website/dist"
+
+# Root directory for the build
+base = "logobox"
+
+# Node.js version (Requirement 5.1 - compatible Node.js version)
+[build.environment]
+NODE_VERSION = "18"
+NPM_VERSION = "9"
+
+# Build environment variables for optimization (Requirement 5.3 - bundle optimization)
+NODE_ENV = "production"
+VITE_BUILD_ANALYZE = "false"
+VITE_ENABLE_PERFORMANCE_MONITORING = "false"
+
+# Build processing settings (Requirement 5.2 - asset processing)
+[build.processing]
+# Enable CSS minification
+css = { bundle = true, minify = true }
+
+# Enable JS minification and optimization
+js = { bundle = true, minify = true }
+
+# Image optimization settings
+images = { 
+  formats = ["webp", "avif"],
+  quality = 85,
+  progressive = true
+}
+
+# Build timeout settings
+[build.timeout]
+# Increase timeout for asset processing (logo optimization and catalog generation)
+build = 600  # 10 minutes
+deploy = 300 # 5 minutes
+
+# Build caching for faster subsequent builds
+[build.cache]
+# Cache node_modules
+node_modules = true
+
+# Cache build artifacts
+build_cache = true
+
+# Cache duration in seconds (24 hours)
+ttl = 86400
+
+# Build hooks for asset processing (Requirement 5.2)
+[build.hooks]
+# Pre-build hook for asset optimization
+pre_build = [
+  "npm run generate-variants",
+  "npm run optimize-assets", 
+  "npm run build-catalog"
+]
+
+# Post-build hook for verification
+post_build = [
+  "npm run test:deployment"
+]
+
+# Error handling
+[build.error_handling]
+# Continue build on non-critical errors
+fail_on_warnings = false
+
+# Retry failed builds
+retry_on_failure = true
+max_retries = 2
+
+# Build notifications
+[build.notifications]
+# Enable build status notifications
+enabled = true
+
+# Notify on build failures
+on_failure = true
+
+# Notify on successful deployments
+on_success = false

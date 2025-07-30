@@ -1,0 +1,55 @@
+{
+  "name": "logobox-monorepo",
+  "version": "1.0.0",
+  "description": "LogoBox - Modern logo and icon hosting platform",
+  "type": "module",
+  "private": true,
+  "workspaces": [
+    "website",
+    "package"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=website",
+    "build": "npm run build --workspace=website && npm run build --workspace=package",
+    "test": "vitest",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration",
+    "test:e2e": "playwright test",
+    "lint": "eslint . --ext .vue,.js,.ts",
+    "format": "prettier --write .",
+    "generate-variants": "node scripts/generateLogoVariants.js",
+    "optimize-assets": "node scripts/optimizeAssets.js",
+    "build-catalog": "node scripts/buildCatalog.js",
+    "validate-metadata": "node scripts/validateMetadata.js",
+    "env-check": "node scripts/env-check.js"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.40.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "ajv": "^8.12.0",
+    "ajv-formats": "^2.1.1",
+    "cheerio": "^1.1.2",
+    "eslint": "^8.45.0",
+    "eslint-plugin-vue": "^9.17.0",
+    "prettier": "^3.0.0",
+    "svgo": "^4.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/DevelopmentCats/LogoBox.git"
+  },
+  "bugs": {
+    "url": "https://github.com/DevelopmentCats/LogoBox/issues"
+  },
+  "homepage": "https://github.com/DevelopmentCats/LogoBox#readme",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "dependencies": {
+    "sharp": "^0.34.3"
+  }
+}
