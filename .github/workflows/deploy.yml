@@ -49,6 +49,33 @@ jobs:
       
       - name: Run environment check
         run: npm run env-check
+        env:
+          # Website configuration
+          VITE_APP_TITLE: "LogoBox"
+          VITE_APP_DESCRIPTION: "Browse and discover high-quality logos and icons"
+          VITE_API_BASE_URL: "https://api.logobox.dev"
+          VITE_CDN_BASE_URL: "https://cdn.logobox.dev"
+          VITE_CATALOG_PATH: "/catalog.json"
+          VITE_LOGOS_PATH: "/logos"
+          VITE_API_TIMEOUT: "15000"
+          VITE_API_RETRY_ATTEMPTS: "3"
+          VITE_API_RETRY_DELAY: "2000"
+          VITE_ENABLE_ANALYTICS: "true"
+          VITE_ENABLE_PERFORMANCE_MONITORING: "false"
+          VITE_LOG_LEVEL: "warn"
+          VITE_CDN_FALLBACK_URL_1: "https://backup-cdn1.logobox.dev"
+          VITE_CDN_FALLBACK_URL_2: "https://backup-cdn2.logobox.dev"
+          # Package configuration
+          LOGOBOX_BASE_URL: "https://logobox.dev"
+          LOGOBOX_CDN_BASE_URL: "https://cdn.logobox.dev"
+          LOGOBOX_DEFAULT_VARIANT: "original"
+          LOGOBOX_CACHE_ENABLED: "true"
+          LOGOBOX_CACHE_TTL: "3600000"
+          LOGOBOX_API_BASE_URL: "https://api.logobox.dev"
+          # GitHub secrets for deployment check
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       
       - name: Run unit tests
         run: npm run test:unit
@@ -108,6 +135,28 @@ jobs:
           VITE_BUILD_TIME: ${{ github.run_id }}
           VITE_COMMIT_SHA: ${{ github.sha }}
           VITE_GITHUB_REPO: DevelopmentCats/LogoBox
+          # Website configuration
+          VITE_APP_TITLE: LogoBox
+          VITE_APP_DESCRIPTION: Browse and discover high-quality logos and icons
+          VITE_API_BASE_URL: https://api.logobox.dev
+          VITE_CDN_BASE_URL: https://cdn.logobox.dev
+          VITE_CATALOG_PATH: /catalog.json
+          VITE_LOGOS_PATH: /logos
+          VITE_API_TIMEOUT: 15000
+          VITE_API_RETRY_ATTEMPTS: 3
+          VITE_API_RETRY_DELAY: 2000
+          VITE_ENABLE_ANALYTICS: true
+          VITE_ENABLE_PERFORMANCE_MONITORING: false
+          VITE_LOG_LEVEL: warn
+          VITE_CDN_FALLBACK_URL_1: https://backup-cdn1.logobox.dev
+          VITE_CDN_FALLBACK_URL_2: https://backup-cdn2.logobox.dev
+          # Package configuration
+          LOGOBOX_BASE_URL: https://logobox.dev
+          LOGOBOX_CDN_BASE_URL: https://cdn.logobox.dev
+          LOGOBOX_DEFAULT_VARIANT: original
+          LOGOBOX_CACHE_ENABLED: true
+          LOGOBOX_CACHE_TTL: 3600000
+          LOGOBOX_API_BASE_URL: https://api.logobox.dev
       
       - name: Generate build info
         id: build-info

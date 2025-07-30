@@ -129,7 +129,7 @@ function checkEnvFile(filePath, componentName) {
     logWarning(`${componentName} environment file not found: ${filePath}`);
     return false;
   }
-  
+
   logSuccess(`${componentName} environment file found: ${filePath}`);
   return true;
 }
@@ -138,7 +138,7 @@ function loadEnvFile(filePath) {
   try {
     const content = readFileSync(filePath, 'utf8');
     const env = {};
-    
+
     content.split('\n').forEach(line => {
       line = line.trim();
       if (line && !line.startsWith('#') && line.includes('=')) {
@@ -147,7 +147,7 @@ function loadEnvFile(filePath) {
         env[key.trim()] = value;
       }
     });
-    
+
     return env;
   } catch (error) {
     logError(`Failed to load environment file: ${filePath}`);
@@ -165,7 +165,7 @@ function validateVariable(key, value, isRequired = false) {
       return true;
     }
   }
-  
+
   // Apply validation rules if they exist
   if (validationRules[key]) {
     if (!validationRules[key](value)) {
@@ -173,16 +173,16 @@ function validateVariable(key, value, isRequired = false) {
       return false;
     }
   }
-  
+
   logSuccess(`${key} = ${value}`);
   return true;
 }
 
 function checkComponent(componentName, envVars, config) {
   log(`\n${colors.bold}Checking ${componentName} configuration:${colors.reset}`);
-  
+
   let allValid = true;
-  
+
   // Check required variables
   if (config.required) {
     log('\nRequired variables:');
@@ -191,7 +191,7 @@ function checkComponent(componentName, envVars, config) {
       if (!isValid) allValid = false;
     }
   }
-  
+
   // Check optional variables
   if (config.optional) {
     log('\nOptional variables:');
@@ -199,7 +199,7 @@ function checkComponent(componentName, envVars, config) {
       validateVariable(varName, envVars[varName], false);
     }
   }
-  
+
   // Check secrets (only warn if missing, don't fail)
   if (config.secrets) {
     log('\nSecret variables (should be set in CI/CD):');
@@ -211,21 +211,21 @@ function checkComponent(componentName, envVars, config) {
       }
     }
   }
-  
+
   return allValid;
 }
 
 function main() {
   log(`${colors.bold}${colors.blue}LogoBox Environment Validation${colors.reset}\n`);
-  
+
   let overallValid = true;
-  
+
   // Check if .env.example files exist
   log(`${colors.bold}Checking .env.example files:${colors.reset}`);
   checkEnvFile(join(rootDir, '.env.example'), 'Root');
   checkEnvFile(join(rootDir, 'website', '.env.example'), 'Website');
   checkEnvFile(join(rootDir, 'package', '.env.example'), 'Package');
-  
+
   // Load environment variables from various sources
   const envSources = [
     join(rootDir, '.env'),
@@ -237,9 +237,9 @@ function main() {
     join(rootDir, 'package', '.env'),
     join(rootDir, 'package', '.env.local')
   ];
-  
+
   const allEnvVars = { ...process.env };
-  
+
   // Load from .env files
   for (const envFile of envSources) {
     if (existsSync(envFile)) {
@@ -248,14 +248,14 @@ function main() {
       logInfo(`Loaded variables from: ${envFile}`);
     }
   }
-  
+
   // Validate each component
   const websiteValid = checkComponent('Website', allEnvVars, requiredVars.website);
   const packageValid = checkComponent('Package', allEnvVars, requiredVars.package);
   checkComponent('Deployment', allEnvVars, requiredVars.deployment);
-  
+
   overallValid = websiteValid && packageValid;
-  
+
   // Summary
   log(`\n${colors.bold}Validation Summary:${colors.reset}`);
   if (overallValid) {
@@ -266,7 +266,7 @@ function main() {
     log('\nPlease check the errors above and update your .env files.');
     log('Refer to .env.example files for the correct format and required variables.');
   }
-  
+
   // Exit with appropriate code
   process.exit(overallValid ? 0 : 1);
 }
