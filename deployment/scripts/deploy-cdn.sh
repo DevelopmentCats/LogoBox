@@ -106,7 +106,7 @@ print_step "Setting up R2 bucket..."
 
 # List buckets with error handling
 echo "🔍 Listing existing R2 buckets..."
-if ! BUCKET_LIST=$(wrangler r2 bucket list --remote 2>&1); then
+if ! BUCKET_LIST=$(wrangler r2 bucket list 2>&1); then
     print_error "Failed to list R2 buckets. Error: $BUCKET_LIST"
     exit 1
 fi
@@ -114,7 +114,7 @@ echo "$BUCKET_LIST"
 
 if ! echo "$BUCKET_LIST" | grep -q "$BUCKET_NAME"; then
     print_warning "Bucket $BUCKET_NAME not found. Creating..."
-    if ! wrangler r2 bucket create "$BUCKET_NAME" --remote 2>&1; then
+    if ! wrangler r2 bucket create "$BUCKET_NAME" 2>&1; then
         print_error "Failed to create R2 bucket: $BUCKET_NAME"
         exit 1
     fi
@@ -126,15 +126,15 @@ fi
 # Upload catalog.json
 print_step "Uploading catalog.json..."
 echo "🔍 Uploading: assets/catalog.json → $BUCKET_NAME/catalog.json"
-if ! wrangler r2 object put "$BUCKET_NAME/catalog.json" --file="assets/catalog.json" --content-type="application/json" --remote 2>&1; then
+if ! wrangler r2 object put "$BUCKET_NAME/catalog.json" --file="assets/catalog.json" --content-type="application/json" 2>&1; then
     print_error "Failed to upload catalog.json"
     exit 1
 fi
-print_success "Uploaded catalog.json to remote R2 bucket"
+print_success "Uploaded catalog.json to R2 bucket"
 
 # Verify upload
 print_step "Verifying catalog upload..."
-if wrangler r2 object get "$BUCKET_NAME/catalog.json" --file="/tmp/catalog-verify.json" --remote 2>/dev/null; then
+if wrangler r2 object get "$BUCKET_NAME/catalog.json" --file="/tmp/catalog-verify.json" 2>/dev/null; then
     UPLOADED_SIZE=$(wc -c < /tmp/catalog-verify.json)
     ORIGINAL_SIZE=$(wc -c < assets/catalog.json)
     if [ "$UPLOADED_SIZE" -eq "$ORIGINAL_SIZE" ]; then
@@ -165,7 +165,7 @@ for logo_dir in assets/logos/*/; do
                 remote_path="logos/$logo_name/$filename"
                 
                 echo "🔍 Uploading: $svg_file → $BUCKET_NAME/$remote_path"
-                if ! wrangler r2 object put "$BUCKET_NAME/$remote_path" --file="$svg_file" --content-type="image/svg+xml" --remote 2>&1; then
+                if ! wrangler r2 object put "$BUCKET_NAME/$remote_path" --file="$svg_file" --content-type="image/svg+xml" 2>&1; then
                     print_error "Failed to upload: $svg_file"
                     exit 1
                 fi
