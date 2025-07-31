@@ -120,6 +120,14 @@ jobs:
       - name: Build catalog
         run: npm run build-catalog
       
+      - name: Deploy assets to CDN
+        run: |
+          chmod +x ./deployment/scripts/deploy-cdn.sh
+          ./deployment/scripts/deploy-cdn.sh dev
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      
       - name: Build website
         run: npm run build --workspace=website
         env:

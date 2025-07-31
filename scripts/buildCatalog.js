@@ -78,9 +78,27 @@ class CatalogBuilder {
       }
     };
 
-    // Write catalog to file
+    // Write catalog to file(s)
     const catalogJson = JSON.stringify(catalog, null, 2);
+    
+    // Write to primary output path (assets directory)
     fs.writeFileSync(this.options.outputPath, catalogJson);
+    
+    // Also write to website public directory for builds
+    const websitePublicPath = './website/public/catalog.json';
+    const websitePublicDir = path.dirname(websitePublicPath);
+    
+    // Ensure website public directory exists
+    if (!fs.existsSync(websitePublicDir)) {
+      fs.mkdirSync(websitePublicDir, { recursive: true });
+    }
+    
+    fs.writeFileSync(websitePublicPath, catalogJson);
+    console.log(`✅ Catalog written to ${this.options.outputPath}`);
+    console.log(`✅ Catalog written to ${websitePublicPath}`);
+    
+    // Copy logo assets to website public directory
+    await this.copyLogosToWebsite();
 
     console.log(`\n📚 Catalog built successfully:`);
     console.log(`   ✓ Processed: ${processedCount} logos`);
@@ -248,6 +266,45 @@ class CatalogBuilder {
     });
 
     return new Date(latestTime).toISOString();
+  }
+
+  /**
+   * Copy logo assets to website public directory
+   */
+  async copyLogosToWebsite() {
+    const websiteLogosDir = './website/public/logos';
+    
+    // Ensure website logos directory exists
+    if (!fs.existsSync(websiteLogosDir)) {
+      fs.mkdirSync(websiteLogosDir, { recursive: true });
+    }
+    
+    // Copy each logo directory
+    const logoDirectories = fs.readdirSync(this.options.logosDir, { withFileTypes: true })
+      .filter(dirent => dirent.isDirectory())
+      .map(dirent => dirent.name);
+    
+    for (const logoDir of logoDirectories) {
+      const sourcePath = path.join(this.options.logosDir, logoDir);
+      const destPath = path.join(websiteLogosDir, logoDir);
+      
+      // Ensure destination directory exists
+      if (!fs.existsSync(destPath)) {
+        fs.mkdirSync(destPath, { recursive: true });
+      }
+      
+      // Copy all SVG files
+      const files = fs.readdirSync(sourcePath);
+      for (const file of files) {
+        if (file.endsWith('.svg')) {
+          const sourceFile = path.join(sourcePath, file);
+          const destFile = path.join(destPath, file);
+          fs.copyFileSync(sourceFile, destFile);
+        }
+      }
+    }
+    
+    console.log(`✅ Logo assets copied to ${websiteLogosDir}`);
   }
 }
 

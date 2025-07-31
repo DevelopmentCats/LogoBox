@@ -89,6 +89,13 @@ npm run optimize-assets
 echo -e "${BLUE}📚 Building catalog...${NC}"
 npm run build-catalog
 
+# Deploy assets to CDN (R2)
+echo -e "${BLUE}🚀 Deploying assets to CDN...${NC}"
+cd ..
+chmod +x ./deployment/scripts/deploy-cdn.sh
+./deployment/scripts/deploy-cdn.sh dev
+cd logobox
+
 # Build website
 echo -e "${BLUE}🏗️  Building website for development...${NC}"
 export NODE_ENV=development
