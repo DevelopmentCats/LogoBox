@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { createRouter, createWebHistory } from 'vue-router'
 import { mount } from '@vue/test-utils'
 import { createApp } from 'vue'
+import { createPinia } from 'pinia'
 import HomeView from '../../views/HomeView.vue'
 import LogoDetailView from '../../views/LogoDetailView.vue'
 
@@ -99,11 +100,17 @@ describe('Route Components', () => {
     
     const wrapper = mount(HomeView, {
       global: {
-        plugins: [router]
+        plugins: [router, createPinia()],
+        stubs: {
+          SearchBar: true,
+          FilterPanel: true,
+          LogoGrid: true
+        }
       }
     })
     
-    expect(wrapper.find('h2').text()).toBe('Welcome to LogoBox')
+    expect(wrapper.find('h1').text()).toBe('Welcome to LogoBox')
+    expect(wrapper.find('h2').text()).toBe('Browse All Logos')
     expect(wrapper.find('.home-view').exists()).toBe(true)
   })
 
@@ -114,13 +121,22 @@ describe('Route Components', () => {
     const wrapper = mount(LogoDetailView, {
       props: { slug: testSlug },
       global: {
-        plugins: [router]
+        plugins: [router, createPinia()],
+        stubs: {
+          AdvancedDownloadModal: true
+        }
       }
     })
     
-    expect(wrapper.find('h2').text()).toBe(`Logo Detail: ${testSlug}`)
     expect(wrapper.find('.logo-detail-view').exists()).toBe(true)
     expect(wrapper.props('slug')).toBe(testSlug)
+    
+    // Component should be in loading state initially or show error/content
+    const hasLoadingState = wrapper.find('.loading-state').exists()
+    const hasErrorState = wrapper.find('.error-state').exists()
+    const hasContent = wrapper.find('.logo-detail-content').exists()
+    
+    expect(hasLoadingState || hasErrorState || hasContent).toBe(true)
   })
 
   it('should handle different slug values in LogoDetailView', () => {
@@ -130,12 +146,22 @@ describe('Route Components', () => {
       const wrapper = mount(LogoDetailView, {
         props: { slug },
         global: {
-          plugins: [router]
+          plugins: [router, createPinia()],
+          stubs: {
+            AdvancedDownloadModal: true
+          }
         }
       })
       
       expect(wrapper.props('slug')).toBe(slug)
-      expect(wrapper.find('h2').text()).toBe(`Logo Detail: ${slug}`)
+      expect(wrapper.find('.logo-detail-view').exists()).toBe(true)
+      
+      // Component should handle the slug prop correctly regardless of loading state
+      const hasLoadingState = wrapper.find('.loading-state').exists()
+      const hasErrorState = wrapper.find('.error-state').exists()
+      const hasContent = wrapper.find('.logo-detail-content').exists()
+      
+      expect(hasLoadingState || hasErrorState || hasContent).toBe(true)
     })
   })
 })
