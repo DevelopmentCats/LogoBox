@@ -414,11 +414,21 @@ describe('LogoGrid', () => {
       const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
       
       const logoCard = wrapper.findComponent(LogoCard)
-      const errorEvent = { logo: mockLogos[0], event: new Event('error') }
+      const errorEvent = { 
+        logo: { slug: 'github' }, 
+        url: 'https://example.com/error.svg',
+        retryCount: 0,
+        canRetry: true
+      }
       
       await logoCard.vm.$emit('image-error', errorEvent)
       
-      expect(consoleSpy).toHaveBeenCalledWith('Logo image failed to load:', errorEvent)
+      expect(consoleSpy).toHaveBeenCalledWith('Logo image failed to load:', {
+        logo: 'github',
+        error: 'https://example.com/error.svg',
+        retryCount: 0,
+        canRetry: true
+      })
       
       consoleSpy.mockRestore()
     })

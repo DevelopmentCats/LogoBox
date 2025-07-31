@@ -287,7 +287,8 @@ export default {
     'view',
     'hover',
     'image-load',
-    'image-error'
+    'image-error',
+    'visibility-change'
   ],
   
   setup(props, { emit }) {
