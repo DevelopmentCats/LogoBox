@@ -2,9 +2,10 @@
   "name": "Microsoft",
   "slug": "microsoft",
   "categories": ["technology", "software"],
-  "tags": ["windows", "office", "cloud", "enterprise"],
+  "tags": ["windows", "office"],
   "description": "Microsoft Corporation is a multinational technology company that develops computer software, consumer electronics, and personal computers.",
   "license": "Fair Use",
+  "website": "https://microsoft.com",
   "variants": {
     "original": "logo.svg",
     "white": "logo-white.svg",

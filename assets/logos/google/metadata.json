@@ -1,0 +1,15 @@
+{
+  "name": "Google",
+  "slug": "google",
+  "categories": ["technology", "search"],
+  "tags": ["search", "android"],
+  "description": "Google is a multinational technology company that specializes in Internet-related services and products.",
+  "license": "Fair Use",
+  "website": "https://google.com",
+  "variants": {
+    "original": "logo.svg"
+  },
+  "formats": {
+    "svg": "logo.svg"
+  }
+}

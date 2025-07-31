@@ -6,6 +6,7 @@
 import fs from 'fs';
 import path from 'path';
 import Ajv from 'ajv';
+import addFormats from 'ajv-formats';
 
 /**
  * Metadata validator class
@@ -17,8 +18,9 @@ class MetadataValidator {
       strict: options.strict !== false,
       ...options
     };
-    
+
     this.ajv = new Ajv({ allErrors: true });
+    addFormats(this.ajv); // Add format support including 'uri'
     this.schema = this.getMetadataSchema();
     this.validate = this.ajv.compile(this.schema);
   }
@@ -65,7 +67,7 @@ class MetadataValidator {
         },
         license: {
           type: 'string',
-          enum: ['MIT', 'Apache-2.0', 'GPL-3.0', 'BSD-3-Clause', 'CC0-1.0', 'Custom', 'Unknown']
+          enum: ['MIT', 'Apache-2.0', 'GPL-3.0', 'BSD-3-Clause', 'CC0-1.0', 'Custom', 'Unknown', 'Fair Use']
         },
         website: {
           type: 'string',
@@ -77,6 +79,25 @@ class MetadataValidator {
             type: 'string'
           },
           maxItems: 20
+        },
+        variants: {
+          type: 'object',
+          properties: {
+            original: { type: 'string' },
+            white: { type: 'string' },
+            black: { type: 'string' },
+            optimized: { type: 'string' }
+          },
+          additionalProperties: { type: 'string' }
+        },
+        formats: {
+          type: 'object',
+          properties: {
+            svg: { type: 'string' },
+            png: { type: 'string' },
+            jpg: { type: 'string' }
+          },
+          additionalProperties: { type: 'string' }
         }
       },
       additionalProperties: false
@@ -88,7 +109,7 @@ class MetadataValidator {
    */
   async validateAllMetadata() {
     console.log('🔍 Starting metadata validation...');
-    
+
     const logosDir = this.options.logosDir;
     const logoDirectories = fs.readdirSync(logosDir, { withFileTypes: true })
       .filter(dirent => dirent.isDirectory())
@@ -144,7 +165,7 @@ class MetadataValidator {
     // Read and parse metadata
     const metadataContent = fs.readFileSync(metadataPath, 'utf8');
     let metadata;
-    
+
     try {
       metadata = JSON.parse(metadataContent);
     } catch (error) {
@@ -196,14 +217,15 @@ class MetadataValidator {
 
     // Validate categories against known categories
     const knownCategories = [
-      'technology', 'social', 'finance', 'development', 'design', 
-      'productivity', 'entertainment', 'education', 'business'
+      'technology', 'social', 'finance', 'development', 'design',
+      'productivity', 'entertainment', 'education', 'business',
+      'version-control', 'cloud', 'database', 'analytics', 'software', 'search', 'hardware'
     ];
-    
-    const unknownCategories = metadata.categories.filter(cat => 
+
+    const unknownCategories = metadata.categories.filter(cat =>
       !knownCategories.includes(cat)
     );
-    
+
     if (unknownCategories.length > 0) {
       errors.push({
         instancePath: '/categories',
@@ -244,7 +266,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       const report = validator.generateReport(results);
       console.log('\n📊 Validation Report:');
       console.log(JSON.stringify(report.summary, null, 2));
-      
+
       if (results.errorCount > 0) {
         process.exit(1);
       }

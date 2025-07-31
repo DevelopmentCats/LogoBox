@@ -1,0 +1,15 @@
+{
+  "name": "Apple",
+  "slug": "apple",
+  "categories": ["technology", "hardware"],
+  "tags": ["ios", "mac"],
+  "description": "Apple Inc. is a multinational technology company that designs, develops, and sells consumer electronics, computer software, and online services.",
+  "license": "Fair Use",
+  "website": "https://apple.com",
+  "variants": {
+    "original": "logo.svg"
+  },
+  "formats": {
+    "svg": "logo.svg"
+  }
+}

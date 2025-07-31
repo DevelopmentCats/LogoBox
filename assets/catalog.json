@@ -1,155 +1,172 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2025-07-28T19:35:07.894Z",
+  "lastUpdated": "2025-07-31T13:48:28.378Z",
   "logos": [
+    {
+      "name": "Apple",
+      "slug": "apple",
+      "description": "Apple Inc. is a multinational technology company that designs, develops, and sells consumer electronics, computer software, and online services.",
+      "categories": [
+        "technology",
+        "hardware"
+      ],
+      "tags": [
+        "ios",
+        "mac"
+      ],
+      "license": "Fair Use",
+      "website": "https://apple.com",
+      "variants": {
+        "original": "https://cdn.logobox.dev/logos/apple/logo.svg",
+        "white": "https://cdn.logobox.dev/logos/apple/logo-white.svg",
+        "black": "https://cdn.logobox.dev/logos/apple/logo-black.svg",
+        "optimized": "https://cdn.logobox.dev/logos/apple/logo-optimized.svg"
+      },
+      "formats": {
+        "svg": {
+          "url": "https://cdn.logobox.dev/logos/apple/logo.svg",
+          "fileSize": 678,
+          "checksum": "364821120ac57ec2"
+        }
+      },
+      "metrics": {
+        "totalSize": 3098,
+        "fileCount": 5,
+        "avgFileSize": 620
+      },
+      "directory": "assets/logos/apple",
+      "lastModified": "2025-07-31T13:48:06.310Z"
+    },
     {
       "name": "GitHub",
       "slug": "github",
+      "description": "GitHub is a web-based version control and collaboration platform for software developers.",
       "categories": [
         "development",
         "version-control"
       ],
       "tags": [
         "git",
-        "code",
-        "repository",
         "open-source"
       ],
-      "description": "GitHub is a web-based version control and collaboration platform for software developers.",
       "license": "MIT",
+      "website": "https://github.com",
       "variants": {
-        "original": "logo.svg",
-        "white": "logo-white.svg",
-        "black": "logo-black.svg",
-        "optimized": "logo-optimized.svg"
+        "original": "https://cdn.logobox.dev/logos/github/logo.svg",
+        "white": "https://cdn.logobox.dev/logos/github/logo-white.svg",
+        "black": "https://cdn.logobox.dev/logos/github/logo-black.svg",
+        "optimized": "https://cdn.logobox.dev/logos/github/logo-optimized.svg"
       },
       "formats": {
-        "svg": "logo.svg"
+        "svg": {
+          "url": "https://cdn.logobox.dev/logos/github/logo.svg",
+          "fileSize": 560,
+          "checksum": "9784b54c11612d1c"
+        }
       },
-      "fileStats": {
-        "variants": {
-          "original": {
-            "filename": "logo.svg",
-            "size": 560,
-            "createdAt": "2025-07-28T00:39:34.178Z",
-            "updatedAt": "2025-07-28T00:51:50.555Z"
-          },
-          "white": {
-            "filename": "logo-white.svg",
-            "size": 555,
-            "createdAt": "2025-07-28T00:39:56.105Z",
-            "updatedAt": "2025-07-28T19:03:13.965Z"
-          },
-          "black": {
-            "filename": "logo-black.svg",
-            "size": 555,
-            "createdAt": "2025-07-28T00:39:56.113Z",
-            "updatedAt": "2025-07-28T19:03:13.973Z"
-          },
-          "optimized": {
-            "filename": "logo-optimized.svg",
-            "size": 560,
-            "createdAt": "2025-07-28T00:39:56.089Z",
-            "updatedAt": "2025-07-28T19:03:13.956Z"
-          }
-        },
-        "directory": "/home/chesher/Documents/Projects/LogoBox/logobox/assets/logos/github"
-      }
+      "metrics": {
+        "totalSize": 2724,
+        "fileCount": 5,
+        "avgFileSize": 545
+      },
+      "directory": "assets/logos/github",
+      "lastModified": "2025-07-31T13:48:10.636Z"
+    },
+    {
+      "name": "Google",
+      "slug": "google",
+      "description": "Google is a multinational technology company that specializes in Internet-related services and products.",
+      "categories": [
+        "technology",
+        "search"
+      ],
+      "tags": [
+        "search",
+        "android"
+      ],
+      "license": "Fair Use",
+      "website": "https://google.com",
+      "variants": {
+        "original": "https://cdn.logobox.dev/logos/google/logo.svg",
+        "white": "https://cdn.logobox.dev/logos/google/logo-white.svg",
+        "black": "https://cdn.logobox.dev/logos/google/logo-black.svg",
+        "optimized": "https://cdn.logobox.dev/logos/google/logo-optimized.svg"
+      },
+      "formats": {
+        "svg": {
+          "url": "https://cdn.logobox.dev/logos/google/logo.svg",
+          "fileSize": 1926,
+          "checksum": "ddf7b7b6eb7d4954"
+        }
+      },
+      "metrics": {
+        "totalSize": 7997,
+        "fileCount": 5,
+        "avgFileSize": 1599
+      },
+      "directory": "assets/logos/google",
+      "lastModified": "2025-07-31T13:48:15.254Z"
     },
     {
       "name": "Microsoft",
       "slug": "microsoft",
+      "description": "Microsoft Corporation is a multinational technology company that develops computer software, consumer electronics, and personal computers.",
       "categories": [
         "technology",
         "software"
       ],
       "tags": [
         "windows",
-        "office",
-        "cloud",
-        "enterprise"
+        "office"
       ],
-      "description": "Microsoft Corporation is a multinational technology company that develops computer software, consumer electronics, and personal computers.",
       "license": "Fair Use",
+      "website": "https://microsoft.com",
       "variants": {
-        "original": "logo.svg",
-        "white": "logo-white.svg",
-        "black": "logo-black.svg",
-        "optimized": "logo-optimized.svg"
+        "original": "https://cdn.logobox.dev/logos/microsoft/logo.svg",
+        "white": "https://cdn.logobox.dev/logos/microsoft/logo-white.svg",
+        "black": "https://cdn.logobox.dev/logos/microsoft/logo-black.svg",
+        "optimized": "https://cdn.logobox.dev/logos/microsoft/logo-optimized.svg"
       },
       "formats": {
-        "svg": "logo.svg"
+        "svg": {
+          "url": "https://cdn.logobox.dev/logos/microsoft/logo.svg",
+          "fileSize": 120,
+          "checksum": "ab081ee9c81dab0e"
+        }
       },
-      "fileStats": {
-        "variants": {
-          "original": {
-            "filename": "logo.svg",
-            "size": 120,
-            "createdAt": "2025-07-28T00:39:44.941Z",
-            "updatedAt": "2025-07-28T00:51:50.581Z"
-          },
-          "white": {
-            "filename": "logo-white.svg",
-            "size": 115,
-            "createdAt": "2025-07-28T00:39:56.131Z",
-            "updatedAt": "2025-07-28T19:03:13.977Z"
-          },
-          "black": {
-            "filename": "logo-black.svg",
-            "size": 115,
-            "createdAt": "2025-07-28T00:39:56.134Z",
-            "updatedAt": "2025-07-28T19:03:13.979Z"
-          },
-          "optimized": {
-            "filename": "logo-optimized.svg",
-            "size": 120,
-            "createdAt": "2025-07-28T00:39:56.127Z",
-            "updatedAt": "2025-07-28T19:03:13.975Z"
-          }
-        },
-        "directory": "/home/chesher/Documents/Projects/LogoBox/logobox/assets/logos/microsoft"
-      }
+      "metrics": {
+        "totalSize": 1008,
+        "fileCount": 5,
+        "avgFileSize": 202
+      },
+      "directory": "assets/logos/microsoft",
+      "lastModified": "2025-07-31T13:48:19.159Z"
     }
   ],
   "categories": [
     "development",
+    "hardware",
+    "search",
     "software",
     "technology",
     "version-control"
   ],
   "tags": [
-    "cloud",
-    "code",
-    "enterprise",
+    "android",
     "git",
+    "ios",
+    "mac",
     "office",
     "open-source",
-    "repository",
+    "search",
     "windows"
   ],
-  "statistics": {
-    "totalLogos": 2,
-    "totalCategories": 4,
+  "stats": {
+    "totalLogos": 4,
+    "totalCategories": 6,
     "totalTags": 8,
-    "licenseDistribution": {
-      "MIT": 1,
-      "Fair Use": 1
-    },
-    "categoryDistribution": {
-      "development": 1,
-      "version-control": 1,
-      "technology": 1,
-      "software": 1
-    },
-    "tagDistribution": {
-      "git": 1,
-      "code": 1,
-      "repository": 1,
-      "open-source": 1,
-      "windows": 1,
-      "office": 1,
-      "cloud": 1,
-      "enterprise": 1
-    }
+    "buildTime": 10,
+    "processedCount": 4,
+    "errorCount": 0
   }
 }
