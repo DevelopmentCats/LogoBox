@@ -13,6 +13,9 @@
 /logos/*  /logos/:splat  200
   Cache-Control: public, max-age=86400
   X-Content-Type-Options: nosniff
+  Access-Control-Allow-Origin: *
+  Access-Control-Allow-Methods: GET, OPTIONS
+  Access-Control-Allow-Headers: Content-Type
 
 # Catalog caching for dynamic content (Requirement 5.2 - catalog generation)
 /catalog.json  /catalog.json  200

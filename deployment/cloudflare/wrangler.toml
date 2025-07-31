@@ -96,3 +96,12 @@ globs = ["/api/**/*", "**/*.json"]
 "Access-Control-Allow-Origin" = "*"
 "Access-Control-Allow-Methods" = "GET, POST, OPTIONS"
 "Access-Control-Allow-Headers" = "Content-Type, Authorization"
+
+# CORS headers for logo assets
+[[env.production.rules]]
+type = "Text"
+globs = ["logos/**/*", "**/*.svg"]
+[env.production.rules.result.headers]
+"Access-Control-Allow-Origin" = "*"
+"Access-Control-Allow-Methods" = "GET, OPTIONS"
+"Access-Control-Allow-Headers" = "Content-Type"

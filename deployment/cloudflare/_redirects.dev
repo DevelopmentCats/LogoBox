@@ -16,6 +16,9 @@
   Cache-Control: public, max-age=1800
   X-Content-Type-Options: nosniff
   X-Environment: development
+  Access-Control-Allow-Origin: *
+  Access-Control-Allow-Methods: GET, OPTIONS
+  Access-Control-Allow-Headers: Content-Type
 
 # Catalog caching for development (shorter for faster updates)
 /catalog.json  /catalog.json  200
