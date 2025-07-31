@@ -46,7 +46,7 @@ jobs:
           VITE_APP_TITLE: "LogoBox (Dev)"
           VITE_APP_DESCRIPTION: "Browse and discover high-quality logos and icons - Development Environment"
           VITE_API_BASE_URL: "https://dev-api.logobox.dev"
-          VITE_CDN_BASE_URL: "https://dev-cdn.logobox.dev"
+          VITE_CDN_BASE_URL: "https://dev.cdn.logobox.dev"
           VITE_CATALOG_PATH: "/catalog.json"
           VITE_LOGOS_PATH: "/logos"
           VITE_API_TIMEOUT: "5000"
@@ -59,7 +59,7 @@ jobs:
           VITE_CDN_FALLBACK_URL_2: "https://dev-backup-cdn2.logobox.dev"
           # Package configuration (development)
           LOGOBOX_BASE_URL: "https://dev.logobox.dev"
-          LOGOBOX_CDN_BASE_URL: "https://dev-cdn.logobox.dev"
+          LOGOBOX_CDN_BASE_URL: "https://dev.cdn.logobox.dev"
           LOGOBOX_DEFAULT_VARIANT: "original"
           LOGOBOX_CACHE_ENABLED: "true"
           LOGOBOX_CACHE_TTL: "1800000"
@@ -130,6 +130,7 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          SKIP_CDN_TESTS: "true"
       
       - name: Build website
         run: npm run build --workspace=website
@@ -143,7 +144,7 @@ jobs:
           VITE_APP_TITLE: LogoBox (Dev)
           VITE_APP_DESCRIPTION: Browse and discover high-quality logos and icons - Development Environment
           VITE_API_BASE_URL: https://dev-api.logobox.dev
-          VITE_CDN_BASE_URL: https://dev-cdn.logobox.dev
+          VITE_CDN_BASE_URL: https://dev.cdn.logobox.dev
           VITE_CATALOG_PATH: /catalog.json
           VITE_LOGOS_PATH: /logos
           VITE_API_TIMEOUT: 5000
@@ -152,11 +153,11 @@ jobs:
           VITE_ENABLE_ANALYTICS: false
           VITE_ENABLE_PERFORMANCE_MONITORING: true
           VITE_LOG_LEVEL: debug
-          VITE_CDN_FALLBACK_URL_1: https://dev-backup-cdn1.logobox.dev
-          VITE_CDN_FALLBACK_URL_2: https://dev-backup-cdn2.logobox.dev
+          VITE_CDN_FALLBACK_URL_1: https://dev-backup.cdn.logobox.dev
+          VITE_CDN_FALLBACK_URL_2: https://dev-backup2.cdn.logobox.dev
           # Package configuration (development)
           LOGOBOX_BASE_URL: https://dev.logobox.dev
-          LOGOBOX_CDN_BASE_URL: https://dev-cdn.logobox.dev
+          LOGOBOX_CDN_BASE_URL: https://dev.cdn.logobox.dev
           LOGOBOX_DEFAULT_VARIANT: original
           LOGOBOX_CACHE_ENABLED: true
           LOGOBOX_CACHE_TTL: 1800000

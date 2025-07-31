@@ -36,18 +36,14 @@ ENVIRONMENT=${1:-"dev"}
 case $ENVIRONMENT in
     "dev")
         BUCKET_NAME="logobox-dev"
-        CDN_URL="https://cdn.logobox.dev"
-        ;;
-    "staging")
-        BUCKET_NAME="logobox-cdn-staging"
-        CDN_URL="https://staging-cdn.logobox.dev"
+        CDN_URL="https://dev.cdn.logobox.dev"
         ;;
     "production")
         BUCKET_NAME="logobox-cdn"
         CDN_URL="https://cdn.logobox.dev"
         ;;
     *)
-        print_error "Invalid environment. Use: dev, staging, or production"
+        print_error "Invalid environment. Use: dev or production"
         exit 1
         ;;
 esac
@@ -125,44 +121,55 @@ print_success "Uploaded $TOTAL_LOGOS logo assets"
 # Set up public access and caching headers
 print_step "Configuring bucket settings..."
 
-# Note: This would require additional Cloudflare API calls or Terraform
-# For now, these need to be configured manually in the Cloudflare dashboard:
-# 1. Set up custom domain (cdn.logobox.dev) pointing to R2 bucket
-# 2. Configure caching rules
-# 3. Set CORS headers if needed
+print_warning "IMPORTANT: Manual DNS configuration required in Cloudflare Dashboard!"
+echo ""
+echo "To complete CDN setup, configure the following in your Cloudflare dashboard:"
+echo "1. 📌 Create custom domain '$CDN_URL' pointing to R2 bucket '$BUCKET_NAME'"
+echo "2. 🚀 Configure caching rules for optimal performance"
+echo "3. 🔧 Set appropriate CORS headers for cross-origin requests"
+echo "4. 🔒 Configure public read access for the bucket"
+echo ""
+echo "📖 Reference: https://developers.cloudflare.com/r2/buckets/public-buckets/"
+echo ""
 
-print_warning "Manual configuration required:"
-echo "1. Set up custom domain $CDN_URL pointing to R2 bucket $BUCKET_NAME"
-echo "2. Configure caching rules in Cloudflare dashboard"
-echo "3. Set appropriate CORS headers if needed"
-
-# Test deployment
-print_step "Testing deployment..."
-
-# Wait a moment for propagation
-sleep 5
-
-# Test catalog endpoint
-if curl -f -s "$CDN_URL/catalog.json" > /dev/null; then
-    print_success "Catalog endpoint accessible: $CDN_URL/catalog.json"
+# Test deployment (only if environment variable is set to skip DNS requirements)
+if [ "${SKIP_CDN_TESTS:-false}" = "true" ]; then
+    print_step "Skipping connectivity tests (SKIP_CDN_TESTS=true)"
 else
-    print_warning "Catalog endpoint not yet accessible (may need DNS propagation)"
+    print_step "Testing deployment (requires DNS configuration)..."
+    
+    # Wait a moment for propagation
+    sleep 5
+    
+    # Test catalog endpoint
+    if curl -f -s "$CDN_URL/catalog.json" > /dev/null 2>&1; then
+        print_success "✅ Catalog endpoint accessible: $CDN_URL/catalog.json"
+    else
+        print_warning "⚠️  Catalog endpoint not accessible - DNS configuration needed"
+        print_warning "    Expected URL: $CDN_URL/catalog.json"
+    fi
+    
+    # Test a sample logo
+    if curl -f -s "$CDN_URL/logos/github/logo.svg" > /dev/null 2>&1; then
+        print_success "✅ Sample logo accessible: $CDN_URL/logos/github/logo.svg"
+    else
+        print_warning "⚠️  Sample logo not accessible - DNS configuration needed"
+        print_warning "    Expected URL: $CDN_URL/logos/github/logo.svg"
+    fi
 fi
 
-# Test a sample logo
-if curl -f -s "$CDN_URL/logos/github/logo.svg" > /dev/null; then
-    print_success "Sample logo accessible: $CDN_URL/logos/github/logo.svg"
-else
-    print_warning "Sample logo not yet accessible (may need DNS propagation)"
-fi
-
-print_success "CDN deployment completed!"
+print_success "🎉 CDN deployment completed!"
 echo ""
-echo "CDN URL: $CDN_URL"
-echo "Bucket: $BUCKET_NAME"
-echo "Assets uploaded: $TOTAL_LOGOS logos + catalog"
+echo "📊 Deployment Summary:"
+echo "   CDN URL: $CDN_URL"
+echo "   R2 Bucket: $BUCKET_NAME"
+echo "   Assets: $TOTAL_LOGOS logos + catalog.json"
+echo "   Environment: $ENVIRONMENT"
 echo ""
-echo "Next steps:"
-echo "1. Configure custom domain in Cloudflare dashboard"
-echo "2. Update environment variables to use CDN URLs"
-echo "3. Test website and npm package integration"
+echo "🔧 Required Next Steps:"
+echo "1. 🌐 Configure custom domain '$CDN_URL' in Cloudflare dashboard"
+echo "2. 🔒 Set bucket to public read access"
+echo "3. ⚡ Configure caching rules for performance"
+echo "4. 🧪 Test endpoints: $CDN_URL/catalog.json"
+echo ""
+print_warning "CDN endpoints will not be accessible until DNS configuration is complete!"
