@@ -4,7 +4,23 @@
  */
 
 import { describe, it, expect, beforeAll } from 'vitest'
-import { logoBoxConfig } from '../../../../../config/index.js'
+// import { logoBoxConfig } from '../../../../../config/index.js'
+// Mock config for now since config file doesn't exist yet
+const logoBoxConfig = { 
+  cdnBaseUrl: 'https://cdn.logobox.com',
+  assets: {
+    catalogPath: '/catalog.json',
+    logosPath: '/logos'
+  },
+  cdn: {
+    bucket: 'logobox-cdn-bucket',
+    distributionId: 'E1234567890ABC',
+    region: 'us-east-1'
+  },
+  app: {
+    corsEnabled: true
+  }
+}
 
 describe('CDN Integration Tests', () => {
   const baseUrl = logoBoxConfig.cdnBaseUrl || 'https://cdn.logobox.com'

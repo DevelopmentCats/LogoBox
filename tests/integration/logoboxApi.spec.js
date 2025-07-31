@@ -17,26 +17,37 @@ describe('LogoBox API Integration', () => {
 
   describe('Search Functionality', () => {
     it('should search logos by text query', async () => {
-      const results = logobox.search('github');
+      const results = await logobox.search({ text: 'github' });
       expect(results).toBeDefined();
-      expect(Array.isArray(results)).toBe(true);
+      expect(results.logos).toBeDefined();
+      expect(Array.isArray(results.logos)).toBe(true);
     });
 
-    it('should return empty array for non-existent logos', () => {
-      const results = logobox.search('nonexistentlogo12345');
-      expect(results).toEqual([]);
+    it('should return empty array for non-existent logos', async () => {
+      const results = await logobox.search({ text: 'nonexistentlogo12345' });
+      expect(results.logos).toEqual([]);
+      expect(results.total).toBe(0);
     });
 
-    it('should perform case-insensitive search', () => {
-      const lowerResults = logobox.search('github');
-      const upperResults = logobox.search('GITHUB');
-      expect(lowerResults).toEqual(upperResults);
+    it('should perform case-insensitive search', async () => {
+      const lowerResults = await logobox.search({ text: 'github' });
+      const upperResults = await logobox.search({ text: 'GITHUB' });
+      
+      // Compare essential properties (excluding timestamps)
+      expect(lowerResults.logos.length).toEqual(upperResults.logos.length);
+      expect(lowerResults.total).toEqual(upperResults.total);
+      
+      if (lowerResults.logos.length > 0 && upperResults.logos.length > 0) {
+        expect(lowerResults.logos[0].id).toEqual(upperResults.logos[0].id);
+        expect(lowerResults.logos[0].name).toEqual(upperResults.logos[0].name);
+        expect(lowerResults.logos[0].slug).toEqual(upperResults.logos[0].slug);
+      }
     });
   });
 
   describe('Logo Retrieval', () => {
-    it('should get logo by slug', () => {
-      const logo = logobox.getBySlug('github');
+    it('should get logo by slug', async () => {
+      const logo = await logobox.getBySlug('github');
       expect(logo).toBeDefined();
       if (logo) {
         expect(logo.slug).toBe('github');
@@ -44,18 +55,18 @@ describe('LogoBox API Integration', () => {
       }
     });
 
-    it('should return null for non-existent slug', () => {
-      const logo = logobox.getBySlug('nonexistent');
+    it('should return null for non-existent slug', async () => {
+      const logo = await logobox.getBySlug('nonexistent');
       expect(logo).toBeNull();
     });
 
-    it('should get logos by category', () => {
-      const logos = logobox.getByCategory('technology');
+    it('should get logos by category', async () => {
+      const logos = await logobox.getByCategory('technology');
       expect(Array.isArray(logos)).toBe(true);
     });
 
-    it('should get logos by tags', () => {
-      const logos = logobox.getByTags(['javascript']);
+    it('should get logos by tags', async () => {
+      const logos = await logobox.getByTags(['javascript']);
       expect(Array.isArray(logos)).toBe(true);
     });
   });
@@ -76,23 +87,27 @@ describe('LogoBox API Integration', () => {
   });
 
   describe('Metadata Access', () => {
-    it('should get all categories', () => {
-      const categories = logobox.getAllCategories();
+    it('should get all categories', async () => {
+      const categories = await logobox.getAllCategories();
       expect(Array.isArray(categories)).toBe(true);
       expect(categories.length).toBeGreaterThan(0);
     });
 
-    it('should get all tags', () => {
-      const tags = logobox.getAllTags();
+    it('should get all tags', async () => {
+      const tags = await logobox.getAllTags();
       expect(Array.isArray(tags)).toBe(true);
     });
   });
 
   describe('Error Handling', () => {
-    it('should handle invalid parameters gracefully', () => {
-      expect(() => logobox.search('')).not.toThrow();
-      expect(() => logobox.getBySlug('')).not.toThrow();
-      expect(() => logobox.getByCategory('')).not.toThrow();
+    it('should handle invalid parameters gracefully', async () => {
+      // Empty search should return results (not throw)
+      const emptySearchResults = await logobox.search({ text: '' });
+      expect(emptySearchResults.logos).toBeDefined();
+      
+      // Invalid slug and category should throw
+      await expect(() => logobox.getBySlug('')).rejects.toThrow();
+      await expect(() => logobox.getByCategory('')).rejects.toThrow();
     });
   });
 });
