@@ -129,16 +129,6 @@ jobs:
       - name: Install Wrangler CLI
         run: npm install -g wrangler
       
-      - name: Prepare CDN files for upload
-        run: |
-          # Create a temp directory with the correct structure
-          mkdir -p cdn-upload
-          # Copy files to root level (no assets/ prefix)
-          cp -r assets/* cdn-upload/
-          # Show structure for debugging
-          echo "CDN upload structure:"
-          find cdn-upload -type f | head -10
-      
       - name: Deploy assets to R2 CDN
         uses: ryand56/r2-upload-action@latest
         with:
@@ -146,7 +136,7 @@ jobs:
           r2-access-key-id: ${{ secrets.R2_ACCESS_KEY_ID }}
           r2-secret-access-key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           r2-bucket: logobox-cdn
-          source-dir: cdn-upload/
+          source-dir: assets
           destination-dir: ''
       
       - name: Build website
