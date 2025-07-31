@@ -56,19 +56,47 @@ echo ""
 # Check prerequisites
 print_step "Checking prerequisites..."
 
+# Check wrangler
 if ! command -v wrangler &> /dev/null; then
     print_error "Wrangler CLI not found. Please install: npm install -g wrangler"
     exit 1
 fi
+print_success "Wrangler CLI found: $(wrangler --version)"
 
+# Debug: Show current directory and list contents
+echo "🔍 Current directory: $(pwd)"
+echo "🔍 Directory contents:"
+ls -la
+
+# Check for catalog
 if [ ! -f "assets/catalog.json" ]; then
-    print_error "Catalog not found. Please run: npm run build-catalog"
+    print_error "Catalog not found at assets/catalog.json"
+    echo "🔍 Checking for assets directory:"
+    if [ -d "assets" ]; then
+        echo "Assets directory exists, contents:"
+        ls -la assets/
+    else
+        echo "Assets directory does not exist"
+    fi
+    exit 1
+fi
+print_success "Found catalog: assets/catalog.json ($(wc -c < assets/catalog.json) bytes)"
+
+# Check for logo assets
+if [ ! -d "assets/logos" ]; then
+    print_error "Logo assets not found in assets/logos"
+    echo "🔍 Assets directory contents:"
+    ls -la assets/ || echo "Assets directory not accessible"
     exit 1
 fi
 
-if [ ! -d "assets/logos" ]; then
-    print_error "Logo assets not found in assets/logos"
-    exit 1
+# Count and show logo files
+LOGO_COUNT=$(find assets/logos -name "*.svg" 2>/dev/null | wc -l)
+print_success "Found $LOGO_COUNT logo files in assets/logos"
+if [ "$LOGO_COUNT" -eq 0 ]; then
+    print_warning "No SVG files found in assets/logos directory"
+    echo "🔍 Contents of assets/logos:"
+    ls -la assets/logos/
 fi
 
 print_success "Prerequisites check passed"
@@ -76,9 +104,20 @@ print_success "Prerequisites check passed"
 # Create R2 bucket if it doesn't exist
 print_step "Setting up R2 bucket..."
 
-if ! wrangler r2 bucket list | grep -q "$BUCKET_NAME"; then
+# List buckets with error handling
+echo "🔍 Listing existing R2 buckets..."
+if ! BUCKET_LIST=$(wrangler r2 bucket list 2>&1); then
+    print_error "Failed to list R2 buckets. Error: $BUCKET_LIST"
+    exit 1
+fi
+echo "$BUCKET_LIST"
+
+if ! echo "$BUCKET_LIST" | grep -q "$BUCKET_NAME"; then
     print_warning "Bucket $BUCKET_NAME not found. Creating..."
-    wrangler r2 bucket create "$BUCKET_NAME"
+    if ! wrangler r2 bucket create "$BUCKET_NAME" 2>&1; then
+        print_error "Failed to create R2 bucket: $BUCKET_NAME"
+        exit 1
+    fi
     print_success "Created R2 bucket: $BUCKET_NAME"
 else
     print_success "R2 bucket exists: $BUCKET_NAME"
@@ -86,8 +125,27 @@ fi
 
 # Upload catalog.json
 print_step "Uploading catalog.json..."
-wrangler r2 object put "$BUCKET_NAME/catalog.json" --file="assets/catalog.json" --content-type="application/json"
+echo "🔍 Uploading: assets/catalog.json → $BUCKET_NAME/catalog.json"
+if ! wrangler r2 object put "$BUCKET_NAME/catalog.json" --file="assets/catalog.json" --content-type="application/json" 2>&1; then
+    print_error "Failed to upload catalog.json"
+    exit 1
+fi
 print_success "Uploaded catalog.json"
+
+# Verify upload
+print_step "Verifying catalog upload..."
+if wrangler r2 object get "$BUCKET_NAME/catalog.json" --file="/tmp/catalog-verify.json" 2>/dev/null; then
+    UPLOADED_SIZE=$(wc -c < /tmp/catalog-verify.json)
+    ORIGINAL_SIZE=$(wc -c < assets/catalog.json)
+    if [ "$UPLOADED_SIZE" -eq "$ORIGINAL_SIZE" ]; then
+        print_success "Catalog verified: $UPLOADED_SIZE bytes"
+    else
+        print_warning "Size mismatch: original $ORIGINAL_SIZE bytes, uploaded $UPLOADED_SIZE bytes"
+    fi
+    rm -f /tmp/catalog-verify.json
+else
+    print_warning "Could not verify catalog upload"
+fi
 
 # Upload logo assets
 print_step "Uploading logo assets..."
@@ -106,7 +164,11 @@ for logo_dir in assets/logos/*/; do
                 filename=$(basename "$svg_file")
                 remote_path="logos/$logo_name/$filename"
                 
-                wrangler r2 object put "$BUCKET_NAME/$remote_path" --file="$svg_file" --content-type="image/svg+xml"
+                echo "🔍 Uploading: $svg_file → $BUCKET_NAME/$remote_path"
+                if ! wrangler r2 object put "$BUCKET_NAME/$remote_path" --file="$svg_file" --content-type="image/svg+xml" 2>&1; then
+                    print_error "Failed to upload: $svg_file"
+                    exit 1
+                fi
                 
                 CURRENT=$((CURRENT + 1))
                 echo -ne "\rUploading logos... $CURRENT/$TOTAL_LOGOS"
