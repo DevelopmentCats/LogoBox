@@ -36,7 +36,7 @@ ENVIRONMENT=${1:-"dev"}
 case $ENVIRONMENT in
     "dev")
         BUCKET_NAME="logobox-dev"
-        CDN_URL="https://dev.cdn.logobox.dev"
+        CDN_URL="https://dev-cdn.logobox.dev"
         ;;
     "production")
         BUCKET_NAME="logobox-cdn"
