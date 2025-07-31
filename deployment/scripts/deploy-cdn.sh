@@ -118,44 +118,43 @@ done
 echo ""
 print_success "Uploaded $TOTAL_LOGOS logo assets"
 
-# Set up public access and caching headers
-print_step "Configuring bucket settings..."
+# Test CDN endpoints
+print_step "Testing CDN endpoints..."
 
-print_warning "IMPORTANT: Manual DNS configuration required in Cloudflare Dashboard!"
-echo ""
-echo "To complete CDN setup, configure the following in your Cloudflare dashboard:"
-echo "1. 📌 Create custom domain '$CDN_URL' pointing to R2 bucket '$BUCKET_NAME'"
-echo "2. 🚀 Configure caching rules for optimal performance"
-echo "3. 🔧 Set appropriate CORS headers for cross-origin requests"
-echo "4. 🔒 Configure public read access for the bucket"
-echo ""
-echo "📖 Reference: https://developers.cloudflare.com/r2/buckets/public-buckets/"
-echo ""
+# Wait a moment for any propagation
+sleep 3
 
-# Test deployment (only if environment variable is set to skip DNS requirements)
-if [ "${SKIP_CDN_TESTS:-false}" = "true" ]; then
-    print_step "Skipping connectivity tests (SKIP_CDN_TESTS=true)"
+# Test catalog endpoint
+CATALOG_ACCESSIBLE=false
+LOGO_ACCESSIBLE=false
+
+if curl -f -s "$CDN_URL/catalog.json" > /dev/null 2>&1; then
+    print_success "✅ Catalog endpoint accessible: $CDN_URL/catalog.json"
+    CATALOG_ACCESSIBLE=true
 else
-    print_step "Testing deployment (requires DNS configuration)..."
-    
-    # Wait a moment for propagation
-    sleep 5
-    
-    # Test catalog endpoint
-    if curl -f -s "$CDN_URL/catalog.json" > /dev/null 2>&1; then
-        print_success "✅ Catalog endpoint accessible: $CDN_URL/catalog.json"
-    else
-        print_warning "⚠️  Catalog endpoint not accessible - DNS configuration needed"
-        print_warning "    Expected URL: $CDN_URL/catalog.json"
-    fi
-    
-    # Test a sample logo
-    if curl -f -s "$CDN_URL/logos/github/logo.svg" > /dev/null 2>&1; then
-        print_success "✅ Sample logo accessible: $CDN_URL/logos/github/logo.svg"
-    else
-        print_warning "⚠️  Sample logo not accessible - DNS configuration needed"
-        print_warning "    Expected URL: $CDN_URL/logos/github/logo.svg"
-    fi
+    print_warning "⚠️  Catalog endpoint not accessible: $CDN_URL/catalog.json"
+fi
+
+# Test a sample logo
+if curl -f -s "$CDN_URL/logos/github/logo.svg" > /dev/null 2>&1; then
+    print_success "✅ Sample logo accessible: $CDN_URL/logos/github/logo.svg"
+    LOGO_ACCESSIBLE=true
+else
+    print_warning "⚠️  Sample logo not accessible: $CDN_URL/logos/github/logo.svg"
+fi
+
+# Show configuration guidance only if endpoints are not working
+if [ "$CATALOG_ACCESSIBLE" = false ] || [ "$LOGO_ACCESSIBLE" = false ]; then
+    echo ""
+    print_warning "CDN endpoints not fully accessible. Please verify Cloudflare configuration:"
+    echo "1. 🌐 Custom domain '$CDN_URL' pointing to R2 bucket '$BUCKET_NAME'"
+    echo "2. 🔒 Bucket set to public read access"
+    echo "3. ⚡ Caching rules configured for performance"
+    echo "4. 🔧 CORS headers set if needed for cross-origin requests"
+    echo ""
+    echo "📖 Reference: https://developers.cloudflare.com/r2/buckets/public-buckets/"
+else
+    print_success "🌐 CDN endpoints are fully accessible!"
 fi
 
 print_success "🎉 CDN deployment completed!"
@@ -166,10 +165,15 @@ echo "   R2 Bucket: $BUCKET_NAME"
 echo "   Assets: $TOTAL_LOGOS logos + catalog.json"
 echo "   Environment: $ENVIRONMENT"
 echo ""
-echo "🔧 Required Next Steps:"
-echo "1. 🌐 Configure custom domain '$CDN_URL' in Cloudflare dashboard"
-echo "2. 🔒 Set bucket to public read access"
-echo "3. ⚡ Configure caching rules for performance"
-echo "4. 🧪 Test endpoints: $CDN_URL/catalog.json"
-echo ""
-print_warning "CDN endpoints will not be accessible until DNS configuration is complete!"
+
+if [ "$CATALOG_ACCESSIBLE" = true ] && [ "$LOGO_ACCESSIBLE" = true ]; then
+    print_success "✅ CDN is fully operational and serving assets!"
+    echo "🧪 Test your endpoints:"
+    echo "   📄 Catalog: $CDN_URL/catalog.json"
+    echo "   🎨 Sample Logo: $CDN_URL/logos/github/logo.svg"
+else
+    echo "🔧 Next Steps:"
+    echo "1. 🧪 Test endpoints: $CDN_URL/catalog.json"
+    echo "2. 🔍 Check Cloudflare dashboard if endpoints don't work"
+    echo "3. ✅ Verify R2 bucket public access settings"
+fi
